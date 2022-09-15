@@ -24,7 +24,6 @@ def water_neighbor(traj, prot_res, offset):
         for j in range(len(indices)):
             if indices[j] not in water_indices and indices[j] in traj_solv:
                 water_indices.append(indices[j])
-    print(len(water_indices))
     return water_indices
 
 def prot_water_dist(traj, prot_res, offset, water_indices):
@@ -39,6 +38,6 @@ def prot_water_dist(traj, prot_res, offset, water_indices):
     prot_solv = list(product(prot_ind, water_indices))
 
     #Determine distance b/w all protein residues and all solvent molecules
-    [dist, pairs] = md.compute_contacts(traj, contacts=prot_solv, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
+    [dist, pairs] = md.compute_distances(traj, contacts=prot_solv, periodic=True)
 
     return dist
