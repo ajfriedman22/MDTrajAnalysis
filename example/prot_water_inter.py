@@ -43,13 +43,18 @@ traj = traj.mdtraj_load(File_traj, File_gro)
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
-#Compute neighboring water molecules to residue of interest
-water_indices = water_inter.water_neighbor(traj, 121, offset)
+#Set residues of interest
+res_interest = [121]
 
-#Determine the distance b/w all water and protein residues
-water_dist = water_inter.prot_water_dist(traj, 121, offset, water_indices)
+#Loop through each residue of interest
+for i in res_interest:
+    #Compute neighboring water molecules to residue of interest
+    water_indices = water_inter.water_neighbor(traj, 121, offset)
 
-#Determine Number of H-bonds and VDW interactions b/w residue and water molecules in each frame
+    #Determine the distance b/w all water and protein residues
+    water_dist = water_inter.prot_water_dist(traj, 121, offset, water_indices)
+
+    #Determine Number of H-bonds and VDW interactions b/w residue and water molecules in each frame
 
 
-print(np.shape(water_dist))
+    print(np.shape(water_dist))
