@@ -38,6 +38,6 @@ def prot_water_dist(traj, prot_res, offset, water_indices):
     prot_solv = list(product(prot_ind, water_indices))
 
     #Determine distance b/w all protein residues and all solvent molecules
-    [dist, pairs] = md.compute_distances(traj, contacts=prot_solv, periodic=True)
+    dist = md.compute_distances(traj, prot_solv, periodic=True)
 
     return dist

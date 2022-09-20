@@ -17,7 +17,8 @@ import os.path
 parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
-parser.add_argument('-m', required=False, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
+parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
+parser.add_argument('-df', required=True, help= 'Directory github repo is in')
 
 #Import Arguments
 args = parser.parse_args()
@@ -28,17 +29,18 @@ File_gro = args.g
 if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 miss_res = args.m
+directory = args.df
 
 #Source custom functions
-prefix = '/ocean/projects/cts160011p/afriedma/code/MDTrajAnalysis/'
+prefix = directory + '/MDTrajAnalysis/'
 sys.path.insert(1, prefix + 'Traj_process/')
-import traj 
+import load_data 
 
 sys.path.insert(1, prefix + 'protein_inter/')
 import water_inter
 
 #Load Trajectory
-traj = traj.mdtraj_load(File_traj, File_gro)
+traj = load_data.mdtraj_load(File_traj, File_gro)
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
@@ -50,11 +52,12 @@ res_interest = [121]
 for i in res_interest:
     #Compute neighboring water molecules to residue of interest
     water_indices = water_inter.water_neighbor(traj, 121, offset)
-
+    
+    #Determine all h-bonds present
     #Determine the distance b/w all water and protein residues
     water_dist = water_inter.prot_water_dist(traj, 121, offset, water_indices)
-
+    
     #Determine Number of H-bonds and VDW interactions b/w residue and water molecules in each frame
-
+    
 
     print(np.shape(water_dist))
