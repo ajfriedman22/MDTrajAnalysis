@@ -26,8 +26,12 @@ def mdtraj_load(File_traj, File_gro):
 #Output: x, y = vectors for each of the two columns in the input file
 def col2_float_data(file_dir, file_name, convert):
     x,y = [],[]
+    #Process file_name
+    if file_name.split('.')[-1] != 'xvg': #Add file extension if not in input
+        file_name = file_name + '.xvg'
+
     #Load data
-    with open(file_dir + '/' + file_name + '.xvg') as f:
+    with open(file_dir + '/' + file_name) as f:
         for _ in range(18):
             next(f)
         for line in f:
@@ -37,5 +41,15 @@ def col2_float_data(file_dir, file_name, convert):
                 y.append(float(cols[1])*10)
             else:
                 y.append(float(cols[1]))
-    return x,y
+    return x, y
+
+def load_ref(ref, selection):
+    #Load reference PDB
+    ref_pdb = md.load_pdb(ref)
+    top_ref = ref_pdb.topology
+    
+    #Limit reference PDB to Protein bb atoms
+    ref_sect = ref_pdb.atom_slice(top_ref.select(selection))
+    
+    return ref_sect
 
