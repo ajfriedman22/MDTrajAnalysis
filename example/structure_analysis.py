@@ -48,6 +48,8 @@ import process_traj
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
+top = traj.topology
+traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of PTP1B only
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
