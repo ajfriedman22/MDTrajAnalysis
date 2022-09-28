@@ -38,3 +38,76 @@ def equil_deter(rmsd, t_max, output_ns):
         return eq_time
     else:
         return start_i
+#Determine the indices for uncorrelated data
+#Input: data = input data
+#Output: t_uncorr = indices of the uncorrelated data
+def uncorr_ind(data):
+    #Import packages
+    import ruptures as rpt 
+    import numpy as np
+    from statistics import stdev
+
+    #Convert data to float
+    raw = np.zeros(len(data))
+    for i in range(len(data)):
+        raw[i] = float(data[i])
+
+    #Apply ruptures to find uncorrelated samples
+    model = 'l1'
+    algo = rpt.Binseg(model=model, min_size=10, jump=10).fit(raw)
+    n = len(raw)
+    sigma = stdev(raw)
+    t_uncorr = algo.predict(epsilon=3 * n * sigma ** 2)
+
+    return t_uncorr
+
+#Sort data to remove correlated samples
+#Input: data = full data array, t_uncorr = indices of uncorrelated data
+#Output: data_uncorr = data array with correlated samples removed
+def uncorr_sort(data, t_uncorr):
+    #import packages
+    import numpy as np
+
+    #Convert data to float
+    raw = np.zeros(len(data))
+    for i in range(len(data)):
+        raw[i] = float(data[i])
+
+    #Reduce to uncorrelated data
+    num=len(t_uncorr)
+    data_uncorr = np.zeros(num)
+    n = 0
+    for i in range(len(raw)):
+        if i in t_uncorr:
+            data_uncorr[n] = raw[i]
+            n += 1
+
+    return data_uncorr
+
+#Sort data to remove correlated samples for non-interger data arrays
+#Input: data = full data array, t_uncorr = indices of uncorrelated data
+#Output: data_uncorr = data array with correlated samples removed
+def uncorr_char(data, t_uncorr):
+    #Reduce to uncorrelated data
+    num=len(t_uncorr)
+    data_uncorr = []
+    for i in range(len(data)):
+        if i in t_uncorr:
+            data_uncorr.append(data[i])
+
+    return data_uncorr
+
+#Output: Uncorrelated RMSD values and array of uncorrelated frames
+#Input: traj = MDTraj trajectory to compute the RMSD, ref = MDTraj reference structure
+#Output:
+#rmsd_uncorr = RMSD for each frame at each uncorrelated frame in the trajectory
+#t = uncorreated time frames in trajectory
+def compute_rmsd(traj, ref):
+    import mdtraj as md
+    import sys
+
+    rmsd = md.rmsd(traj, ref, parallel=True, precentered=False)
+    t = uncorr_ind(rmsd)
+    rmsd_uncorr = uncorr_sort(rmsd, t)
+    return rmsd_uncorr, t
+
