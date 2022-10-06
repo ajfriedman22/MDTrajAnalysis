@@ -44,6 +44,8 @@ def col2_float_data(file_dir, file_name, convert):
     return x, y
 
 def load_ref(ref, selection):
+    import mdtraj as md
+
     #Load reference PDB
     ref_pdb = md.load_pdb(ref)
     top_ref = ref_pdb.topology
