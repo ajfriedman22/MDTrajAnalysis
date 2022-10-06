@@ -14,11 +14,13 @@ parser.add_argument('-e', required=False, default=0, type=int, help= 'If input t
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-ref', required=False, type=str, default = 'none', help='Reference structure for RMSD')
 parser.add_argument('-mref', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues for the reference structure(default 0)')
+parser.add_argument('-aa', required=False, default=0, type=int, help= 'Number of atoms in receptor')
 parser.add_argument('-df', required=True, help= 'Directory github repo is in')
 parser.add_argument('-l', required=False, default = 'none', type = str, help= 'Ligand name if ligand analysis should be performed')
 parser.add_argument('-lref', required=False, type=str, default = 'none', help='Reference structure for Ligand COM RMSD')
 parser.add_argument('-s', required=False, default = 'none', type = str, help= 'File name for residue ranges for computed RMSD (sect_name ref_res_initial ref_res_final traj_res_initial traj_res_final)')
 parser.add_argument('-rn', required=False, default = 'self', help='Reference name for RMSD')
+parser.add_argument('-ln', required=False, default = 'self', help='Reference name for Ligand RMSD')
 
 #Import Arguments
 args = parser.parse_args()
@@ -30,11 +32,13 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 eq_time = args.e
 miss_res = args.m
-ref_name = args.ref
+ref = args.ref
 miss_ref = args.mref
 directory = args.df
+aa_atom = args.aa
 lig = args.l
-lig = args.lref
+lig_ref = args.lref
+lig_name = args.ln
 rmsd_sect = args.s
 ref_name = args.rn
 
@@ -49,8 +53,11 @@ import process_traj
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
 top = traj.topology
-traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of PTP1B only
-
+if aa_atom != 0:
+    traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of PTP1B only
+else:
+    traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of PTP1B only
+    
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
@@ -61,28 +68,26 @@ else:
     name_add = 'unequil'
 
 #Compute full BB RMSD
-if ref_name != 'none' and traj_bb.n_residues == ref_bb.n_residues:
+if ref != 'none':
     #Load reference
-    ref_bb = load_data.load_ref(ref, 'backbone')
+    if aa_atom != 0:
+        ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom))
+    else:
+        ref_bb = load_data.load_ref(ref, 'backbone')
+    print(traj_bb)
+    print(ref_bb)
 
     #Calculate RMSF from reference structure
     rmsf_data = md.rmsf(traj_bb, ref_bb, parallel=True, precentered=False)
 
     #Calculate RMSD for full protein relative to reference structure
-    rmsd_full_uncorr, t_full = process_traj.compute_rmsd(traj_bb, ref_bb, False)
+    rmsd_full_uncorr, t_full = process_traj.compute_rmsd(traj_bb, ref_bb)
         
-    #Determine time in ns for each uncorrelated frame
-    frame_per_ns = traj_bb.n_frames/traj_time
-    uncorr_time = np.zeros(len(t_full))
-    for i in range(len(t_full)):
-        uncorr_time[i] = t_full[i]/frame_per_ns + eq_time
-
     #Only save RMSD and RMSF values to file for equilibrated input trajectories
     if eq_time != 0 and ref_name == 'self':
         np.savetxt('rmsd_full_ref_' + str(ref_name) + '.txt', rmsd_full_uncorr) #save to text file
         np.savetxt('rmsf_ref_' + str(ref_name) + '.txt', rmsf_data) #save to text file
     np.savetxt('uncorrelated_frames' + name_add + '.txt', t_full) #Save indices for uncorrelated frames to file
-    np.savetxt('uncorrelated_time' + name_add + '.txt', uncorr_time) #Save time for uncorrelated frames to file
 
     print('Full BB RMSD Computed')
 
@@ -96,6 +101,7 @@ if rmsd_sect != 'none':
     #Load reference
     ref_bb = load_data.load_ref(ref, 'backbone')
     ref_top = ref_bb.topology
+    top_bb = traj_bb.topology
 
     #Loop through sections from input file
     sections = open(rmsd_sect, 'r').readlines()
@@ -107,8 +113,8 @@ if rmsd_sect != 'none':
         offset_ref = miss_ref + 1
 
         #Seperate sections
-        ref_sect = ref_bb.atom_slice(ref_top.select(str(ref_res_initial - offset_ref) + ' >= resid and resid <= ' + str(ref_res_final - offset_ref))) #Limit trajectory to the section of choice
-        traj_sect = traj_bb.atom_slice(traj_top.select(str(traj_res_initial - offset) + ' >= resid and resid <= ' + str(traj_res_final - offset))) #Limit trajectory to the section of choice
+        ref_sect = ref_bb.atom_slice(ref_top.select(str(int(ref_res_initial) - offset_ref) + ' <= resid and resid <= ' + str(int(ref_res_final) - offset_ref))) #Limit trajectory to the section of choice
+        traj_sect = traj_bb.atom_slice(top_bb.select(str(int(traj_res_initial) - offset) + ' <= resid and resid <= ' + str(int(traj_res_final) - offset))) #Limit trajectory to the section of choice
 
         #Compute RMSD for section of interest
         rmsd_sect_uncorr, t_sect = process_traj.compute_rmsd(traj_sect, ref_sect)
@@ -122,8 +128,11 @@ else:
 #Compute Ligand COM RMSD
 if lig != 'none':
     #Load reference
-    ref_ns = load_data.load_ref(ref, 'backbone or resname ' + lig)
-    traj_ns = traj.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
+    aa_atom_ref = aa_atom - 1
+    ref_ns = load_data.load_ref(lig_ref, '(backbone and index <= ' + str(aa_atom) + ') or resname ' + lig)
+    traj_ns = traj.atom_slice(top.select('(backbone and index <= ' + str(aa_atom) + ') or resname ' + lig))
+    ref_top = ref_ns.topology
+    top_ns = traj_ns.topology
 
     #Limit trajectory to uncorrelated frames
     if os.path.exists('uncorrelated_frames.txt'):
@@ -139,7 +148,7 @@ if lig != 'none':
 
     #seperate ligand carbon atoms
     lig_only_ref = ref_ns.atom_slice(ref_top.select('resname ' + str(lig))) #reference
-    lig_only_traj = traj_ns_align.atom_slice(top.select('resname ' + str(lig))) #trajectory
+    lig_only_traj = traj_ns_align.atom_slice(top_ns.select('resname ' + str(lig))) #trajectory
 
     lig_only_ref_top = lig_only_ref.topology
     lig_only_traj_top = lig_only_traj.topology
@@ -157,11 +166,11 @@ if lig != 'none':
     lig_rmsd = math.sqrt(np.mean(displacment))
     
     #Output COM RMSD
-    output = open('lig_com_rmsd.txt', 'w')
-    output.write(lig_rmsd)
+    output = open('lig_com_rmsd_' + lig_name + '.txt', 'w')
+    output.write(str(lig_rmsd))
     
     #Output displacment for bootstrapping
-    np.savetxt('lig_com_dis.txt', displacment)
+    np.savetxt('lig_com_dis_' + lig_name + '.txt', displacment)
 
     print('Ligand COM RMSD Completed')
     #Delete unneeded arays
@@ -169,3 +178,25 @@ if lig != 'none':
 
 else:
     print('Ligand COM RMSD Skipped')
+
+#Compute Ligand Heavy atom RMSD
+if lig != 'none':
+    #Load reference
+    ref_bb = load_data.load_ref(lig_ref, 'backbone or resname ' + lig)
+    ref_top = ref_bb.topology
+    
+    #Seperate Ligand heavy atoms
+    ref_sect = ref_bb.atom_slice(ref_top.select("resname " + lig)) #Limit trajectory to the section of choice
+    traj_sect = traj.atom_slice(top.select('resname ' + lig)) #Limit trajectory to the section of choice
+
+    #Compute RMSD for section of interest
+    rmsd_sect_uncorr, t_sect = process_traj.compute_rmsd(traj_sect, ref_sect)
+    
+    #Save RMSD to file
+    np.savetxt('rmsd_lig_heavy_ref_' + lig_name + '.txt', rmsd_sect_uncorr)
+
+    print('Ligand Heavy Atom RMSD Completed')
+
+else:
+    print('Ligand Heavy Atom RMSD Skipped')
+
