@@ -15,7 +15,6 @@ parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply t
 parser.add_argument('-ref', required=False, type=str, default = 'none', help='Reference structure for RMSD')
 parser.add_argument('-mref', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues for the reference structure(default 0)')
 parser.add_argument('-aa', required=False, default=0, type=int, help= 'Number of atoms in receptor')
-parser.add_argument('-df', required=True, help= 'Directory github repo is in')
 parser.add_argument('-l', required=False, default = 'none', type = str, help= 'Ligand name if ligand analysis should be performed')
 parser.add_argument('-lref', required=False, type=str, default = 'none', help='Reference structure for Ligand COM RMSD')
 parser.add_argument('-s', required=False, default = 'none', type = str, help= 'File name for residue ranges for computed RMSD (sect_name ref_res_initial ref_res_final traj_res_initial traj_res_final)')
@@ -34,7 +33,6 @@ eq_time = args.e
 miss_res = args.m
 ref = args.ref
 miss_ref = args.mref
-directory = args.df
 aa_atom = args.aa
 lig = args.l
 lig_ref = args.lref
@@ -43,11 +41,13 @@ rmsd_sect = args.s
 ref_name = args.rn
 
 #Source custom functions
-prefix = directory + '/MDTrajAnalysis/'
-sys.path.insert(1, prefix + 'Traj_process/')
+current_directory = os.path.dirname(os.path.realpath(__file__))
+prefix = current_directory.rsplit('/',1)[0]
+print(prefix)
+sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 
-sys.path.insert(1, prefix + 'protein_inter/')
+sys.path.insert(1, prefix + '/protein_inter/')
 import process_traj
 
 #Load Trajectory
