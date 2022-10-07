@@ -51,7 +51,7 @@ output_high_contact = open('residue_lig_high_contact.txt', 'w')
 
 #Compute % contact
 per_contact = np.zeros(len(prot_res))
-for i in range(len(prot_res)):
+for i in range(0, len(prot_res)):
     dist_i = dist[:,i]
     
     contact = 0 #conter for protein--ligand contact
@@ -59,7 +59,7 @@ for i in range(len(prot_res)):
         if j < 0.4:
             contact += 1
     per_contact[i] = 100 * (contact/len(dist_i))
-    output_per.write(str(prot_res[i]) + ': ' + str(per_contact[i])+ '\n')
+    output_per.write(str(prot_res[i]+1+miss_res) + ': ' + str(per_contact[i])+ '\n')
     if per_contact[i] > 75:
         output_high_contact.write(str(prot_res[i]+1+miss_res) + '\n')
 
