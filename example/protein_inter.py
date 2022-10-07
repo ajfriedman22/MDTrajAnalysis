@@ -23,8 +23,8 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 miss_res = args.m
 sect = args.sect
-if File_gro.split('.')[-1] != 'txt': #Add default file extension if not in input
-    File_gro = File_gro + '.txt'
+if sect.split('.')[-1] != 'txt': #Add default file extension if not in input
+    sect = sect + '.txt'
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -46,8 +46,13 @@ for i in range(len(sections)):
     [name1, sect1_start, sect1_end, name2, sect2_start, sect2_end] = sections[i].split()
     
     #Compute distance between all residues in sect1 and sect2
-    sect1 = np.linspace(sect1_start-1-miss_res, sect1_end-1-miss_res, num=sect1_start-sect1_end)
-    sect2 = np.linspace(sect2_start-1-miss_res, sect2_end-1-miss_res, num=sect2_start-sect2_end)
+    sect1_start = int(sect1_start)-1-miss_res
+    sect1_end = int(sect1_end)-1-miss_res
+    sect2_start = int(sect2_start)-1-miss_res
+    sect2_end = int(sect2_end)-1-miss_res
+
+    sect1 = np.linspace(sect1_start, sect1_end, num=sect1_end-sect1_start+1)
+    sect2 = np.linspace(sect2_start, sect2_end, num=sect2_end-sect2_start+1)
     res_pairs = list(product(sect1, sect2))
     [dist, pairs] = md.compute_contacts(traj_ns, contacts=res_pairs, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
     
@@ -64,7 +69,8 @@ for i in range(len(sections)):
             if j < 0.4:
                 contact += 1
         per_contact = 100 * (contact/len(dist_i))
-        output_per.write(str(res_pairs[i]) + ': ' + str(per_contact)+ '\n')
-        if per_contact[i] > 75:
+        [res1, res2] = res_pairs[i]
+        output_per.write(str(res1-1-miss_res) + ' -- ' + str(res2-1-miss_res) + ': ' + str(per_contact)+ '\n')
+        if per_contact > 75:
             output_high_contact.write(str(res_pairs[i]) + '\n')
 
