@@ -59,18 +59,24 @@ for i in range(len(sections)):
     #Determine the % of the trajectory residues are in contact
     output_per = open(name1 + '_' + name2 + '_inter_per.txt', 'w')
     output_high_contact = open(name1 + '_' + name2 + '_high_contact.txt', 'w')
+    
+    #Determine total interactions b/w sections per frame
+    tot_inter = np.zeros(len(dist[:,0]))
 
     #Compute % contact
     for i in range(len(res_pairs)):
         dist_i = dist[:,i]
     
         contact = 0 #conter for protein--ligand contact
-        for j in dist_i:
-            if j < 0.4:
+        for j in range(len(dist_i)):
+            if dist_i[j] < 0.4:
                 contact += 1
+                tot_inter[j] += 1
         per_contact = 100 * (contact/len(dist_i))
         [res1, res2] = res_pairs[i]
         output_per.write(str(res1-1-miss_res) + ' -- ' + str(res2-1-miss_res) + ': ' + str(per_contact)+ '\n')
         if per_contact > 75:
             output_high_contact.write(str(res_pairs[i]) + '\n')
-
+    
+    #Output total contacts for section
+    np.savetxt(name1 + '_' + name2 + '_tot_inter.txt', tot_inter)
