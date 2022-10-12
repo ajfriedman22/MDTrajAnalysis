@@ -74,9 +74,9 @@ for i in range(len(sections)):
                 tot_inter[j] += 1
         per_contact = 100 * (contact/len(dist_i))
         [res1, res2] = res_pairs[i]
-        output_per.write(str(res1-1-miss_res) + ' -- ' + str(res2-1-miss_res) + ': ' + str(per_contact)+ '\n')
+        output_per.write(str(res1+1+miss_res) + ' -- ' + str(res2+1+miss_res) + ': ' + str(per_contact)+ '\n')
         if per_contact > 75:
-            output_high_contact.write(str(res_pairs[i]) + '\n')
+            output_high_contact.write(str(res1+1+miss_res) + ' -- ' + str(res2+1+miss_res) + '\n')
     
     #Output total contacts for section
     np.savetxt(name1 + '_' + name2 + '_tot_inter.txt', tot_inter)

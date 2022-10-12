@@ -43,7 +43,6 @@ ref_name = args.rn
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
 prefix = current_directory.rsplit('/',1)[0]
-print(prefix)
 sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 
