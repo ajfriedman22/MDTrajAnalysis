@@ -55,3 +55,28 @@ def load_ref(ref, selection):
     
     return ref_sect
 
+def read_sections(sections, i, miss_res, num_prot_res):
+    import numpy as np
+
+    line = sections[i].split()
+    if len(line) == 6:
+        [name1, sect1_start, sect1_end, name2, sect2_start, sect2_end] = line
+    elif len(line) == 3:
+        [name1, sect1_start, sect1_end] = line
+        name2 = 'rest'
+        sect2_start = 1 
+        sect2_end = num_prot_res
+    else:
+        print('Error in input file!')
+        exit()
+
+    #Compute distance between all residues in sect1 and sect2
+    sect1_start = int(sect1_start)-1-miss_res
+    sect1_end = int(sect1_end)-1-miss_res
+    sect2_start = int(sect2_start)-1-miss_res
+    sect2_end = int(sect2_end)-1-miss_res
+
+    sect1 = np.linspace(sect1_start, sect1_end, num=sect1_end-sect1_start+1)
+    sect2 = np.linspace(sect2_start, sect2_end, num=sect2_end-sect2_start+1)
+    
+    return name1, name2, sect1, sect2
