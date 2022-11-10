@@ -19,6 +19,7 @@ parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-l', required=False, type=int, default = 0, help= 'Ligand residue ID')
+parser.add_argument('-sect', required=True, help= 'File containing sections of interest(txt)')
 
 #Import Arguments
 args = parser.parse_args()
@@ -30,6 +31,7 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 miss_res = args.m
 lig = args.l
+sect_name = args.sect
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -42,69 +44,69 @@ import water_inter
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
+traj_ns = traj.remove_solvent()
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
-#Test that ligand ID Assigned properly
-test = traj.topology.select('resid ' + str(lig) + ' and resname LIG')
-if test.size==0:
-    print('Ligand not named correctly! Exiting Immediately!')
-    exit()
+#Determine protein residues to examine based on sections of interest
+input_sect = open(sect_name, 'r').readlines()
+res_interest = []
+for line in input_sect:
+    line = line.split()
+    sect_res = np.linspace(int(line[1]), int(line[2]), num = (int(line[2])-int(line[1])+1))
+    #Add to final list
+    for n in sect_res:
+        res_interest.append(n)
+#Put protein residue list array in numerical orde
+res_interest.sort()
 
-#Determine water ligand contacts
 if lig != 0:
-    lig = lig
-    water_indices, water_per_lig, water_neighbors = water_inter.water_neighbor(traj, lig, offset, False, 530)
+    #Test that ligand ID Assigned properly
+    test = traj_ns.topology.select('resid ' + str(lig-offset) + ' and resname LIG')
+    if test.size==0:
+        print('Ligand not named correctly! Exiting Immediately!')
+        exit()
 
-    #Put residue indices in numerical order
-    water_indices.sort()
+    #Combine ligand and protein residues to make master list of residues of interest
+    res_interest.append(lig)
 
-    #Determine % contact with water residues
-    water_res_per = np.zeros(len(water_indices))
-    for j in range(len(water_neighbors)):#Loop through frames
-        contact = water_neighbors[j]
-        for n in range(len(contact)): #Loop through water interactions in the frame
-            for i in range(len(water_indices)): #Loop through water residues to determine which is matched in frame
-                if contact[n] == water_indices[i]:
-                    water_res_per[i] += 1
-
-    water_res_per = 100*(water_res_per/len(water_neighbors))
-
-    #Output contacts
-    output = open('Ligand_water_per.txt', 'w')
-    output_high = open('Ligand_water_high.txt', 'w')
-    for j in range(len(water_indices)):
-        if water_res_per[j] > 10:
-            output_high.write(str(water_indices[j]) + ': ' + str(water_res_per[j]) + '\n')
-        output.write(str(water_indices[j]) + ': ' + str(water_res_per[j]) + '\n')
-    output.close()
-    output_high.close()
-    print('Ligand Analysis Complete')
-
-#Set residues of interest
-res_interest = np.arange(1, lig-1, 1)
-water_per_res = np.zeros(len(res_interest))
-lig_res_per = np.zeros(len(res_interest))
-
-#Loop through each residue of interest
+#Loop through each residue of interest and determine water contacts
+res_interest_water_neighbors = []
 for i in range(len(res_interest)):
     #Compute neighboring water molecules to residue of interest
-    water_indices, water_per_res[i], lig_res_water_cont = water_inter.water_neighbor(traj, res_interest[i], offset, water_neighbors, 530)
-    lig_res_per[i] = 100*sum(lig_res_water_cont)/len(lig_res_water_cont)
+    water_neighbors = water_inter.water_neighbor(traj, res_interest[i], offset, lig)
 
-#Determine residues with highest number of water molecules interacting
-max_water = max(water_per_res)
-res_max_water = []
+    #Add to master list of water_neighbors
+    res_interest_water_neighbors.append(water_neighbors)
+
+#Determine number of frames in trajectory
+frames = len(res_interest_water_neighbors[0])
+
+#Determine percent water mediated contacts between all residues of interest
+per_wat_contact = np.zeros((len(res_interest), len(res_interest)))
 for i in range(len(res_interest)):
-    if water_per_res[i] > 20:
-        res_max_water.append(res_interest[i])
-np.savetxt('res_max_water.txt', res_max_water)
+    water_contactA = res_interest_water_neighbors[i]
+    for j in range(len(res_interest)):
+        if i == j:
+            per_wat_contact[i][j] = 100
+        elif per_wat_contact[j][i] != 0:
+            per_wat_contact[i][j] = per_wat_contact[j][i]
+        else:
+            water_contactB = res_interest_water_neighbors[j]
+            #sort through frames to determine total contacts
+            count = 0
+            for t in range(frames):
+                #determine if there are any common elements in this frame
+                water_contactA_t = water_contactA[t]
+                water_contactB_t = water_contactB[t]
+                if np.in1d(water_contactA_t, water_contactB_t).any():
+                    count += 1
+            per_wat_contact[i][j] = np.round(100*count/frames, decimals = 2)
 
-#Ouput residues which simultaneously interact with the same water molecules as the ligand
-output = open('lig_res_water.txt', 'w')
-for i in range(len(lig_res_per)):
-    if lig_res_per[i] > 25:
-        output.write(str(res_interest[i]) + ': ' + str(lig_res_per[i]) + '\n')
-np.savetxt('lig_res_water_per.txt', lig_res_per)
-print('Protein Analysis Complete')
+#Print all present contacts to file
+output = open('water_mediated_contact.txt', 'w')
+for i in range(len(res_interest)):
+    for j in range(len(res_interest)):
+        if j > i and per_wat_contact[i][j] > 25:
+            output.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(per_wat_contact[i][j]) + '\n')
