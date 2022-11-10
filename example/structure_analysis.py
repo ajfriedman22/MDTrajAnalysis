@@ -14,6 +14,7 @@ parser.add_argument('-e', required=False, default=0, type=int, help= 'If input t
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-ref', required=False, type=str, default = 'none', help='Reference structure for RMSD')
 parser.add_argument('-mref', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues for the reference structure(default 0)')
+parser.add_argument('-ref2', required=False, type=str, default = 'none', help='Reference structure for RMSD if two proteins present')
 parser.add_argument('-aa', required=False, default=0, type=int, help= 'Number of atoms in receptor')
 parser.add_argument('-l', required=False, default = 'none', type = str, help= 'Ligand name if ligand analysis should be performed')
 parser.add_argument('-lref', required=False, type=str, default = 'none', help='Reference structure for Ligand COM RMSD')
@@ -32,6 +33,7 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
 eq_time = args.e
 miss_res = args.m
 ref = args.ref
+ref2 = args.ref2
 miss_ref = args.mref
 aa_atom = args.aa
 lig = args.l
@@ -39,6 +41,7 @@ lig_ref = args.lref
 lig_name = args.ln
 rmsd_sect = args.s
 ref_name = args.rn
+
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -52,10 +55,6 @@ import process_traj
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
 top = traj.topology
-if aa_atom != 0:
-    traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of PTP1B only
-else:
-    traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of PTP1B only
     
 #Set protein offset based on missing residues
 offset = 1 + miss_res
@@ -71,33 +70,46 @@ if ref != 'none':
     #Load reference
     if aa_atom != 0:
         ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom))
+        traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of protein 1 only
     else:
         ref_bb = load_data.load_ref(ref, 'backbone')
-    print(traj_bb)
-    print(ref_bb)
-
+        traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein only
     #Calculate RMSF from reference structure
     rmsf_data = md.rmsf(traj_bb, ref_bb, parallel=True, precentered=False)
 
     #Calculate RMSD for full protein relative to reference structure
     rmsd_full_uncorr, t_full = process_traj.compute_rmsd(traj_bb, ref_bb)
-        
+    
+    if aa_atom  != 0 and ref2 != 'none':
+        ref2_bb = load_data.load_ref(ref, 'backbone and index > ' + str(aa_atom))
+        traj2_bb = traj.atom_slice(top.select('backbone and index > ' + str(aa_atom))) #Backbond atoms of protein 1 only
+        #Calculate RMSF from reference structure
+        rmsf_data2 = md.rmsf(traj2_bb, ref2_bb, parallel=True, precentered=False)
+
+        #Calculate RMSD for full protein relative to reference structure
+        rmsd_full_uncorr2, t_full = process_traj.compute_rmsd(traj2_bb, ref2_bb)
+
     #Only save RMSD and RMSF values to file for equilibrated input trajectories
     if eq_time != 0 and ref_name == 'self':
         np.savetxt('rmsd_full_ref_' + str(ref_name) + '.txt', rmsd_full_uncorr) #save to text file
         np.savetxt('rmsf_ref_' + str(ref_name) + '.txt', rmsf_data) #save to text file
+        if aa_atom != 0 and ref2 != 'none':
+            np.savetxt('rmsd_full_ref_' + str(ref_name) + '_prot2.txt', rmsd_full_uncorr2) #save to text file
+            np.savetxt('rmsf_ref_' + str(ref_name) + '_prot2.txt', rmsf_data2) #save to text file
+
     np.savetxt('uncorrelated_frames' + name_add + '.txt', t_full) #Save indices for uncorrelated frames to file
 
     print('Full BB RMSD Computed')
 
     #Delete unneeded arrays to save memory
-    del rmsf_data; del rmsd_full_uncorr
+    del rmsf_data; del rmsd_full_uncorr; del ref_bb
 else:
     print('Full BB RMSD Skipped')
 
 #Compute BB RMSD by sections
 if rmsd_sect != 'none':
     #Load reference
+    traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein 1 only
     ref_bb = load_data.load_ref(ref, 'backbone')
     ref_top = ref_bb.topology
     top_bb = traj_bb.topology
@@ -106,20 +118,36 @@ if rmsd_sect != 'none':
     sections = open(rmsd_sect, 'r').readlines()
     for i in sections:
         #Split line by spaces
-        [name, ref_res_initial, ref_res_final, traj_res_initial, traj_res_final] = i.split(' ')
-        
+        line = i.split(' ')
+        if len(line) == 5:
+            [name, ref_res_initial, ref_res_final, traj_res_initial, traj_res_final] = line
+        elif len(line) == 3:
+            [name, traj_res_initial, traj_res_final] = line
+            ref_res_initial = traj_res_initial
+            ref_res_final = traj_res_final
+        else:
+            print('Error in input file')
+            exit()
+
         #Reference offset
         offset_ref = miss_ref + 1
 
         #Seperate sections
-        ref_sect = ref_bb.atom_slice(ref_top.select(str(int(ref_res_initial) - offset_ref) + ' <= resid and resid <= ' + str(int(ref_res_final) - offset_ref))) #Limit trajectory to the section of choice
-        traj_sect = traj_bb.atom_slice(top_bb.select(str(int(traj_res_initial) - offset) + ' <= resid and resid <= ' + str(int(traj_res_final) - offset))) #Limit trajectory to the section of choice
+        ref_res = [int(ref_res_initial) - offset_ref, int(ref_res_final) - offset_ref]
+        if len(line) == 3:
+            traj_res = ref_res
+        else:
+            traj_res = [int(traj_res_initial) - offset, int(traj_res_final) - offset]
 
+        ref_sect = ref_bb.atom_slice(ref_top.select(str(ref_res[0]) + ' <= resid and resid <= ' + str(ref_res[1]))) #Limit trajectory to the section of choice
+        traj_sect = traj_bb.atom_slice(top_bb.select(str(traj_res[0]) + ' <= resid and resid <= ' + str(traj_res[1]))) #Limit trajectory to the section of choice
+        
         #Compute RMSD for section of interest
         rmsd_sect_uncorr, t_sect = process_traj.compute_rmsd(traj_sect, ref_sect)
-    
+        print(len(rmsd_sect_uncorr))
+
         #Save RMSD to file
-        np.savetxt('rmsd_' + name + '_ref_' + str(ref_name) + '.txt', rmsd_sect_uncorr)
+        np.savetxt('rmsd/rmsd_' + name + '_ref_' + str(ref_name) + '.txt', rmsd_sect_uncorr)
     print('Section BB RMSD Completed')
 else:
     print('Section BB RMSD Skipped')
