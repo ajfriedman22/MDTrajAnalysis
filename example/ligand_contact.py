@@ -42,13 +42,8 @@ top = traj_ns.topology
 del traj
 
 #Determine indices of protein and ligand residues in topology
-lig_res = lig - 1 - miss_res
-traj_lig = traj_ns.topology.select('resid ' + str(lig_res) + ' and resname LIG')
-if len(traj_lig) == 0:
-    print('Error in Ligand residue ID! Exiting Immediately!')
-    exit()
+lig_res = load_data.lig_check(lig, miss_res, traj_ns)
 prot_res = np.linspace(0, lig_res-1, num = lig_res)
-del traj_lig
 
 #Determine distance between all protein residues and ligand
 res_pairs = list(product([lig_res], prot_res))
