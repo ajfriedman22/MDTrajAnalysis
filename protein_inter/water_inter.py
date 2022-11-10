@@ -5,15 +5,15 @@ def traj_sect(traj, prot_res, offset):
     traj_sect = top.select('resid ' + str(res)) #Select only atoms in the given section
     return traj_sect
 
-def water_neighbor(traj, prot_res, offset, lig_res_water_neighbor, res_not_water):
+def water_neighbor(traj, res, offset, res_not_water):
     import mdtraj as md
     import numpy as np
 
     #Seperate protein residues of interest
-    prot_ind = traj_sect(traj, prot_res, offset)
+    res_ind = traj_sect(traj, res, offset)
 
     #Compute neighboring atoms for all residues of interest
-    neighbors = md.compute_neighbors(traj, 0.5, prot_ind, haystack_indices=None, periodic=True)
+    neighbors = md.compute_neighbors(traj, 0.5, res_ind, haystack_indices=None, periodic=False)
     
     #Determine which neighbors are water molecules
     top = traj.topology
@@ -51,23 +51,9 @@ def water_neighbor(traj, prot_res, offset, lig_res_water_neighbor, res_not_water
             if res not in water_res_neighbors_i: #remove duplicate residues
                 water_res_neighbors_i.append(res)
         water_res_neighbors.append(water_res_neighbors_i)
+    return water_res_neighbors
 
-    #Determine number of water neighbors in each frame
-    num_neighbors = []
-    for i in range(len(water_res_neighbors)):
-        num_neighbors.append(len(water_res_neighbors[i]))
-
-    mean_neighbors = np.mean(num_neighbors)
-
-    #Get list of all unique neighboring water atoms
-    water_res = []
-    for i in range(len(water_res_neighbors)):#Cycle through each frame
-        indices = water_res_neighbors[i]#Seperate all contacts in that frame
-        for j in range(len(indices)):#Cycle through all contacts and seperate those with water molecules
-            if indices[j] not in water_res:
-                water_res.append(indices[j])
-
-    #Determine if the water molecule interacts with the ligand too
+def seperate():
     if lig_res_water_neighbor != False:
         water_res_lig_prot = []
         for i in range(len(water_res_neighbors)): #Loop through frames
