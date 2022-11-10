@@ -80,3 +80,12 @@ def read_sections(sections, i, miss_res, num_prot_res):
     sect2 = np.linspace(sect2_start, sect2_end, num=sect2_end-sect2_start+1)
     
     return name1, name2, sect1, sect2
+
+def lig_check(lig, miss_res, traj_ns):
+    lig_res = lig - 1 - miss_res
+    traj_lig = traj_ns.topology.select('resid ' + str(lig_res) + ' and resname LIG')
+    if len(traj_lig) == 0:
+        print('Error in Ligand residue ID! Exiting Immediately!')
+        exit()
+    return lig_res
+
