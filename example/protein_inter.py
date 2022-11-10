@@ -36,29 +36,23 @@ import load_data
 traj = load_data.mdtraj_load(File_traj, File_gro)
 traj_ns = traj.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
 top = traj_ns.topology
-del traj
+prot_traj = traj_ns.atom_slice(top.select('protein'))
+num_prot_res = prot_traj.n_residues #Backbond atoms of protein only
+del traj; del prot_traj
 
 #Load sections of interest file
 sections = open(sect, 'r').readlines()
 
 #Loop through sections of interest
 for i in range(len(sections)):
-    [name1, sect1_start, sect1_end, name2, sect2_start, sect2_end] = sections[i].split()
-    
-    #Compute distance between all residues in sect1 and sect2
-    sect1_start = int(sect1_start)-1-miss_res
-    sect1_end = int(sect1_end)-1-miss_res
-    sect2_start = int(sect2_start)-1-miss_res
-    sect2_end = int(sect2_end)-1-miss_res
-
-    sect1 = np.linspace(sect1_start, sect1_end, num=sect1_end-sect1_start+1)
-    sect2 = np.linspace(sect2_start, sect2_end, num=sect2_end-sect2_start+1)
+    name1, name2, sect1, sect2 = load_data.read_sections(sections, i, miss_res, num_prot_res)
     res_pairs = list(product(sect1, sect2))
+
     [dist, pairs] = md.compute_contacts(traj_ns, contacts=res_pairs, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
     
     #Determine the % of the trajectory residues are in contact
-    output_per = open(name1 + '_' + name2 + '_inter_per.txt', 'w')
-    output_high_contact = open(name1 + '_' + name2 + '_high_contact.txt', 'w')
+    output_per = open('prot_inter/' + name1 + '_' + name2 + '_inter_per.txt', 'w')
+    output_high_contact = open('prot_inter/' + name1 + '_' + name2 + '_high_contact.txt', 'w')
     
     #Determine total interactions b/w sections per frame
     tot_inter = np.zeros(len(dist[:,0]))
@@ -69,14 +63,15 @@ for i in range(len(sections)):
     
         contact = 0 #conter for protein--ligand contact
         for j in range(len(dist_i)):
-            if dist_i[j] < 0.4:
+            if dist_i[j] < 0.5:
                 contact += 1
                 tot_inter[j] += 1
         per_contact = 100 * (contact/len(dist_i))
         [res1, res2] = res_pairs[i]
         output_per.write(str(res1+1+miss_res) + ' -- ' + str(res2+1+miss_res) + ': ' + str(per_contact)+ '\n')
-        if per_contact > 75:
-            output_high_contact.write(str(res1+1+miss_res) + ' -- ' + str(res2+1+miss_res) + '\n')
+        if per_contact > 60:
+            output_high_contact.write(str(res1+1+miss_res) + ' -- ' + str(res2+1+miss_res) + ': ' + str(per_contact)+ '\n')
     
     #Output total contacts for section
-    np.savetxt(name1 + '_' + name2 + '_tot_inter.txt', tot_inter)
+    np.savetxt('prot_inter/' + name1 + '_' + name2 + '_tot_inter.txt', tot_inter)
+print('Protein Interaction Analysis Complete')
