@@ -55,7 +55,7 @@ def load_ref(ref, selection):
     
     return ref_sect
 
-def read_sections(sections, i, miss_res, num_prot_res):
+def read_sections(sections, i, miss_res, num_prot_res, num_sect):
     import numpy as np
 
     line = sections[i].split()
@@ -79,11 +79,14 @@ def read_sections(sections, i, miss_res, num_prot_res):
     sect1 = np.linspace(sect1_start, sect1_end, num=sect1_end-sect1_start+1)
     sect2 = np.linspace(sect2_start, sect2_end, num=sect2_end-sect2_start+1)
     
-    return name1, name2, sect1, sect2
+    if num_sect == 1:
+        return name1, sect1
+    else:
+        return name1, name2, sect1, sect2
 
-def lig_check(lig, miss_res, traj_ns):
+def lig_check(lig, miss_res, traj_ns, name):
     lig_res = lig - 1 - miss_res
-    traj_lig = traj_ns.topology.select('resid ' + str(lig_res) + ' and resname LIG')
+    traj_lig = traj_ns.topology.select('resid ' + str(lig_res) + ' and resname ' + name)
     if len(traj_lig) == 0:
         print('Error in Ligand residue ID! Exiting Immediately!')
         exit()
