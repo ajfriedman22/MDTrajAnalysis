@@ -13,7 +13,9 @@ parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-l', required=True, type = int, help= 'Ligand residue number')
+parser.add_argument('-ln', required=False, default = 'LIG', type = str, help= 'Ligand name in GRO file')
 parser.add_argument('-bind', required=True, help= 'File containing residues refingin bound state')
+parser.add_argument('-t', required=True, type = int, help= 'Total time of trajectory(ns)')
 
 #Import Arguments
 args = parser.parse_args()
@@ -25,9 +27,11 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 miss_res = args.m
 lig = args.l
+lig_name = args.ln
 res_bind_file = args.bind
 if res_bind_file.split('.')[-1] != 'txt': #Add default file extension if not in input
     res_bind_file = res_bind_file + '.txt'
+tot_time = args.t
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -42,11 +46,15 @@ top = traj_ns.topology
 del traj
 
 #Determine indices of protein and ligand residues in topology
-lig_res = load_data.lig_check(lig, miss_res, traj_ns)
+lig_res = load_data.lig_check(lig, miss_res, traj_ns, lig_name)
 
 #Load residues which define bound state
-res_bind = open(res_bind_file, 'r').readlines()
-res_bind = res_bind.split()
+sections = open(res_bind_file, 'r').readlines()
+res_bind = []
+for i in range(len(sections)):
+    name, sect = load_data.read_sections(sections, i, miss_res, 1, 1)
+    for n in sect:
+        res_bind.append(n)
 
 #Determine distance between all protein residues and ligand
 res_pairs = list(product([lig_res], res_bind))
@@ -68,13 +76,13 @@ for t in range(frames):
     else:
         lig_bind[t] = 0
         n_unbound += 1
-    if n_unbound > 20:
-        frame_unbind = t
+    if n_unbound > frames*.2:
+        frame_unbind = t - n_unbound
 per_bound = 100*(sum(lig_bind)/frames)
 if frame_unbind == 'none':
-    t_unbind = '>100'
+    t_unbind = tot_time
 else:
-    t_unbind = (frame_unbind/frames) * 100
+    t_unbind = (frame_unbind/frames) * tot_time
 
 output = open('Ligand_bind.txt', 'w')
 output.write('Ligand bound for ' + str(per_bound) + '\n')
