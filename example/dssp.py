@@ -41,8 +41,8 @@ offset = 1 + miss_res
 
 #Seperate section for DSSP calculation
 input_file = open(sect, 'r').readlines()
-[name first, last] = input_file[0].split()
-traj_sect = traj.atom_slice(top.select(str(first) + ' <= resid and resid <= ' + str(last)))
+[name, first, last] = input_file[0].split()
+traj_sect = traj.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
 
 #Compute Phi and Psi angles for all residues in the a7 helix in all frames
 phi_ind, phi_angle = md.compute_phi(traj_sect, periodic = True, opt = True)
@@ -67,8 +67,8 @@ else:
 phi_uncorr = np.zeros((len(t_full), angles)) #declare empty vectors for data
 psi_uncorr = np.zeros((len(t_full), angles))
 for i in range(angles): #loop through all angles
-    phi_uncorr[:,i] = uncorr.sort(phi_angle[:,i], t_full)
-    psi_uncorr[:,i] = uncorr.sort(psi_angle[:,i], t_full)
+    phi_uncorr[:,i] = process_traj.uncorr_sort(phi_angle[:,i], t_full)
+    psi_uncorr[:,i] = process_traj.uncorr_sort(psi_angle[:,i], t_full)
 
 #limit to uncorrelated data
 frame_max,residue = dssp_list.shape #determine the number of frames and residues for which dssp analysis was completed
