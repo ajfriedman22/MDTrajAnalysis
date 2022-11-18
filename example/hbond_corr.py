@@ -31,6 +31,7 @@ for line in file_path:
                 hbond_line.append(i)
     hbonds_all.append(hbond_line)
     hbonds_condition_name.append(line_sep[0])
+print('Files Loaded')
 
 #Determine bonds unique to each condition
 for i in range(len(hbonds_condition_name)):
@@ -48,3 +49,4 @@ for i in range(len(hbonds_condition_name)):
     for n in hbonds_condition:
         if n not in hbonds_not_condition:
             output_hbonds.write(n)
+print('Hbond Correlation Analysis Complete')
