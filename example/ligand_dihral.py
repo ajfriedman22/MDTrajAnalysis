@@ -40,6 +40,8 @@ import plot
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
+traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
+del traj
 
 #Set protein offset based on missing residues
 offset = 1
@@ -54,7 +56,7 @@ for i in range(len(input_ind)):
     torsion_ind[i,:] = [int(line[1])-offset, int(line[2])-offset, int(line[3])-offset, int(line[4])-offset]
 
 #Check that atom indices are for ligand
-lig_atom = traj.topology.select('resname ' + lig)
+lig_atom = traj_uncorr.topology.select('resname ' + lig)
 min_lig = min(lig_atom)
 max_lig = max(lig_atom)
 if ((min_lig <= torsion_ind) & (max_lig >= torsion_ind)).all():
@@ -64,7 +66,7 @@ else:
     exit()
 
 #Compute dihedral angles for ligand
-dihedral = md.compute_dihedrals(traj, indices=torsion_ind)
+dihedral = md.compute_dihedrals(traj_uncorr, indices=torsion_ind)
 
 #Convert to degree
 dihedral = dihedral*(180/np.pi)
