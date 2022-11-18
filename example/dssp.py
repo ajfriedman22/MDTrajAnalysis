@@ -32,6 +32,9 @@ sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 import process_traj
 
+sys.path.insert(1, prefix + '/protein_analysis/')
+import prot_struct
+
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
 traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
@@ -55,7 +58,7 @@ dssp_list = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all r
 file_dssp = open('DSSP_'+ name + '.txt','w') #Create output file for DSSP and write over if file is present
 
 #Replace blank spaces with 'l' for loop to avoid output confusion
-dssp_res_mod = dssp_remove_space(dssp_list, 'l')
+dssp_res_mod = prot_struct.dssp_remove_space(dssp_list, 'l')
 
 #Output DSSP to file
 frame_uncorr, residue = dssp_uncorr.shape
