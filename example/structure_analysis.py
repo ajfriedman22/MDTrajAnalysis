@@ -52,6 +52,9 @@ import load_data
 sys.path.insert(1, prefix + '/protein_inter/')
 import process_traj
 
+sys.path.insert(1, prefix + '/ligand_analysis/')
+import lig_motion
+
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
 top = traj.topology
@@ -144,7 +147,6 @@ if rmsd_sect != 'none':
         
         #Compute RMSD for section of interest
         rmsd_sect_uncorr, t_sect = process_traj.compute_rmsd(traj_sect, ref_sect)
-        print(len(rmsd_sect_uncorr))
 
         #Save RMSD to file
         np.savetxt('rmsd/rmsd_' + name + '_ref_' + str(ref_name) + '.txt', rmsd_sect_uncorr)
@@ -161,36 +163,12 @@ if lig != 'none':
     ref_top = ref_ns.topology
     top_ns = traj_ns.topology
 
-    #Limit trajectory to uncorrelated frames
-    if os.path.exists('uncorrelated_frames.txt'):
-        uncorr_ind_string = open('uncorrelated_frames.txt', 'r').readlines()
-        uncorr_ind = np.zeros(len(uncorr_ind_string), dtype=int)
-        for j in range(len(uncorr_ind_string)):
-            uncorr_ind[j] = int(j)
-        traj_uncorr = traj_ns.slice(uncorr_ind)
-    else:
-        traj_uncorr = traj_ns
+    #Remove uncorrelated frames
+    remove_uncorr('uncorrelated_frames.txt', traj_ns)
 
     traj_ns_align = traj_uncorr.superpose(ref_ns)
-
-    #seperate ligand carbon atoms
-    lig_only_ref = ref_ns.atom_slice(ref_top.select('resname ' + str(lig))) #reference
-    lig_only_traj = traj_ns_align.atom_slice(top_ns.select('resname ' + str(lig))) #trajectory
-
-    lig_only_ref_top = lig_only_ref.topology
-    lig_only_traj_top = lig_only_traj.topology
-        
-    #Compute COM of ligand
-    com = md.compute_center_of_mass(lig_only_traj)
-    com_ref = md.compute_center_of_mass(lig_only_ref)
-        
-    #Compute displacment
-    time, dim = np.shape(com)
-    displacment = np.zeros(time)
-    for j in range(time):
-        displacment[j] = (com[j][0] - com_ref[0][0])**2 + (com[j][1] - com_ref[0][1])**2 + (com[j][2] - com_ref[0][2])**2
-
-    lig_rmsd = math.sqrt(np.mean(displacment))
+    
+    displacment, lig_rmsd = lig_motion.com_rmsd(ref_ns, traj_ns_align, lig)
     
     #Output COM RMSD
     output = open('lig_com_rmsd_' + lig_name + '.txt', 'w')
