@@ -54,17 +54,9 @@ time, angles = np.shape(phi_angle) #determine the number of frames and the numbe
 dssp_list = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all residues in the a7 helix for all trajectory frames
 file_dssp = open('DSSP_'+ name + '.txt','w') #Create output file for DSSP and write over if file is present
 
-#limit to uncorrelated data
-frame_max,residue = dssp_list.shape #determine the number of frames and residues for which dssp analysis was completed
-for i in range(residue): #loop through each residue seperately
-    dssp_res = dssp_list[:,i] #seperate all time values for a single residue
-    dssp_res_mod = [] 
-    for j in dssp_res:
-        if j == ' ': #in dssp a space designates a loop or irregular element
-            dssp_res_mod.append('l') #subsitute an l for this designation to prevent issues with reading character values
-        else: #if not a space keep the same character designation
-            dssp_res_mod.append(j)
-    
+#Replace blank spaces with 'l' for loop to avoid output confusion
+dssp_res_mod = dssp_remove_space(dssp_list, 'l')
+
 #Output DSSP to file
 frame_uncorr, residue = dssp_uncorr.shape
 for i in range(frame_uncorr): #Each row is a single frame
