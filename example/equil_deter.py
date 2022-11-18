@@ -24,5 +24,7 @@ t, rmsd = load_data.col2_float_data('.', file_name, False)
 
 eq_time = process_traj.equil_deter(rmsd, t_max, True)
 
-print(eq_time)
+eq_time = [eq_time]
+np.savetxt('equilibration_time.txt', eq_time)
+print(e'Equilibration analysis completed')
 
