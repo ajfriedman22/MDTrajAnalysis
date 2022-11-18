@@ -28,14 +28,17 @@ current_directory = os.path.dirname(os.path.realpath(__file__))
 prefix = current_directory.rsplit('/',1)[0]
 sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
-import hbond
 import data_process 
+
+sys.path.insert(1, prefix + '/protein_analysis/')
+import hbond
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_prot = traj.atom_slice(traj.topology.select('protein')) #Select only atoms in the protein
+traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
+traj_prot = traj_uncorr.atom_slice(traj_uncorr.topology.select('protein')) #Select only atoms in the protein
 top = traj_prot.topology
-del traj
+del traj; del traj_uncorr
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
