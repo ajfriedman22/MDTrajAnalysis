@@ -92,3 +92,18 @@ def lig_check(lig, miss_res, traj_ns, name):
         exit()
     return lig_res
 
+def remove_uncorr(file_name, traj):
+    import np as numpy
+    import mdtraj as md
+
+    #Limit trajectory to uncorrelated frames
+    if os.path.exists(file_name):
+        uncorr_ind_string = open(file_name, 'r').readlines()
+        uncorr_ind = np.zeros(len(uncorr_ind_string), dtype=int)
+        for j in range(len(uncorr_ind_string)):
+            uncorr_ind[j] = int(j)
+        traj_uncorr = traj.slice(uncorr_ind)
+    else:
+        traj_uncorr = traj
+    
+    return traj_uncorr
