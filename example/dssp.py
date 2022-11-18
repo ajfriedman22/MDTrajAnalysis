@@ -34,15 +34,16 @@ import process_traj
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-top = traj.topology
-    
+traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
+top = traj_uncorr.topology
+del traj
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
 #Seperate section for DSSP calculation
 input_file = open(sect, 'r').readlines()
 [name, first, last] = input_file[0].split()
-traj_sect = traj.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
+traj_sect = traj_uncorr.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
 
 #Compute Phi and Psi angles for all residues in the a7 helix in all frames
 phi_ind, phi_angle = md.compute_phi(traj_sect, periodic = True, opt = True)
@@ -53,26 +54,8 @@ time, angles = np.shape(phi_angle) #determine the number of frames and the numbe
 dssp_list = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all residues in the a7 helix for all trajectory frames
 file_dssp = open('DSSP_'+ name + '.txt','w') #Create output file for DSSP and write over if file is present
 
-#Load uncorrelated frames
-if os.path.exists('uncorrelated_frames.txt'):
-    lines = open('uncorrelated_frames.txt', 'r').readlines()
-    t_full = []
-    for i in lines:
-        t_full.append(float(i.strip()))
-else:
-    print('WARNING: Uncorrelated samples not removed!\n')
-    t_full = np.linspace(0, len(phi_angle), num=len(phi_angle))
-
-#limit to uncorrelated data based on the uncorrelated samples for bb rmsd of the full protein
-phi_uncorr = np.zeros((len(t_full), angles)) #declare empty vectors for data
-psi_uncorr = np.zeros((len(t_full), angles))
-for i in range(angles): #loop through all angles
-    phi_uncorr[:,i] = process_traj.uncorr_sort(phi_angle[:,i], t_full)
-    psi_uncorr[:,i] = process_traj.uncorr_sort(psi_angle[:,i], t_full)
-
 #limit to uncorrelated data
 frame_max,residue = dssp_list.shape #determine the number of frames and residues for which dssp analysis was completed
-dssp_uncorr = np.full((len(t_full) - 1, residue), None) #declare an empty vector to input uncorrelated dssp values for each residue
 for i in range(residue): #loop through each residue seperately
     dssp_res = dssp_list[:,i] #seperate all time values for a single residue
     dssp_res_mod = [] 
@@ -81,17 +64,16 @@ for i in range(residue): #loop through each residue seperately
             dssp_res_mod.append('l') #subsitute an l for this designation to prevent issues with reading character values
         else: #if not a space keep the same character designation
             dssp_res_mod.append(j)
-    dssp_uncorr[:,i] = process_traj.uncorr_char(dssp_res_mod, t_full)
     
 #Output DSSP to file
 frame_uncorr, residue = dssp_uncorr.shape
 for i in range(frame_uncorr): #Each row is a single frame
     for j in range(residue):#Each column is a residue in the a7 helix
-        file_dssp.write(dssp_uncorr[i,j] + ' ')
+        file_dssp.write(dssp_res_mod[i,j] + ' ')
     file_dssp.write('\n') #New line between each time frame
 file_dssp.close() #close file
     
 #Save psi and phi angles to files and overwrite if file is present
-np.savetxt('phi_' + name + '.txt', phi_uncorr)
-np.savetxt('psi_' + name + '.txt', psi_uncorr)
+np.savetxt('phi_' + name + '.txt', phi_angle)
+np.savetxt('psi_' + name + '.txt', psi_angle)
 
