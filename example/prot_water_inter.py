@@ -20,6 +20,7 @@ parser.add_argument('-g', required=True, help= 'File name for input topology (gr
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-l', required=False, type=int, default = 0, help= 'Ligand residue ID')
 parser.add_argument('-sect', required=True, help= 'File containing sections of interest(txt)')
+parser.add_argument('-f', required=False, type=int, default = 0, help= 'Frame for centroid output water molecule indices')
 
 #Import Arguments
 args = parser.parse_args()
@@ -32,6 +33,7 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
 miss_res = args.m
 lig = args.l
 sect_name = args.sect
+frame_cen = args.f
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -45,6 +47,10 @@ import water_inter
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
 traj_ns = traj.remove_solvent()
+print(traj)
+
+if frame_cen != 0:
+    cen_ind = []#Set aray for atom indices of water molecules for centroid
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
@@ -58,6 +64,7 @@ for line in input_sect:
     #Add to final list
     for n in sect_res:
         res_interest.append(n)
+
 #Put protein residue list array in numerical orde
 res_interest.sort()
 
@@ -102,11 +109,29 @@ for i in range(len(res_interest)):
                 water_contactB_t = water_contactB[t]
                 if np.in1d(water_contactA_t, water_contactB_t).any():
                     count += 1
+                #Determine which water index is in contact in the frame of the centroid
+                if t == frame_cen and frame_cen != 0 and j > i:
+                    if np.in1d(water_contactA_t, water_contactB_t).any():
+                        for n in water_contactA_t:
+                            if n in water_contactB_t:
+                                cen_ind.append(n)
+                                break
+                    else:
+                        cen_ind.append(0)
+
             per_wat_contact[i][j] = np.round(100*count/frames, decimals = 2)
+print(cen_ind)
+print('Contacts Calculated')
 
 #Print all present contacts to file
 output = open('water_mediated_contact.txt', 'w')
+output_cen = open('water_mediated_contact_cen_index.txt', 'w')
+n = 0
 for i in range(len(res_interest)):
     for j in range(len(res_interest)):
-        if j > i and per_wat_contact[i][j] > 25:
-            output.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(per_wat_contact[i][j]) + '\n')
+        if j > i:
+            if per_wat_contact[i][j] > 25:
+                output.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(per_wat_contact[i][j]) + '\n')
+                output_cen.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(cen_ind[n]) + '\n')
+            n += 1
+print('Output files written')
