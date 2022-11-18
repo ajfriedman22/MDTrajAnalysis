@@ -29,6 +29,8 @@ current_directory = os.path.dirname(os.path.realpath(__file__))
 prefix = current_directory.rsplit('/',1)[0]
 sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
+
+sys.path.insert(1, prefix + '/protein_analysis/')
 import hbond
 
 #Load Trajectory
@@ -36,6 +38,7 @@ traj = load_data.mdtraj_load(File_traj, File_gro)
 traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
 traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
 del traj; del traj_uncorr #Save space
+print('Trajectory Loaded')
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
@@ -56,4 +59,4 @@ file_object.close() #close file
 #Determine the exact percentage of time that each h-bond present for >60% of the trajectory is formed
 per = hbond.bond_per(traj_ns, hbonds)
 np.savetxt('Hbonds_per.txt', per)
-
+print('Hbond Percentages Calculated and Output')
