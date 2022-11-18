@@ -41,11 +41,11 @@ import load_data
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-
 traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
 traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
 top = traj_ns.topology
 del traj; del traj_uncorr
+print('Trajectory Loaded')
 
 #Determine indices of protein and ligand residues in topology
 lig_res = load_data.lig_check(lig, miss_res, traj_ns, lig_name)
