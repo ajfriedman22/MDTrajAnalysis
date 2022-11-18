@@ -15,7 +15,7 @@ parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply t
 parser.add_argument('-l', required=True, type = int, help= 'Ligand residue number')
 parser.add_argument('-ln', required=False, default = 'LIG', type = str, help= 'Ligand name in GRO file')
 parser.add_argument('-bind', required=True, help= 'File containing residues refingin bound state')
-parser.add_argument('-t', required=True, type = int, help= 'Total time of trajectory(ns)')
+parser.add_argument('-n', required=True, type = int, help= 'Total time of trajectory(ns)')
 
 #Import Arguments
 args = parser.parse_args()
@@ -31,7 +31,7 @@ lig_name = args.ln
 res_bind_file = args.bind
 if res_bind_file.split('.')[-1] != 'txt': #Add default file extension if not in input
     res_bind_file = res_bind_file + '.txt'
-tot_time = args.t
+tot_time = args.n
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -41,9 +41,11 @@ import load_data
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_ns = traj.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
+
+traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
+traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
 top = traj_ns.topology
-del traj
+del traj; del traj_uncorr
 
 #Determine indices of protein and ligand residues in topology
 lig_res = load_data.lig_check(lig, miss_res, traj_ns, lig_name)
@@ -70,13 +72,13 @@ for t in range(frames):
     for i in range(pairs):
         if dist[t][i] < 0.4:
             n_inter += 1
-    if n_inter > n_inter/2 and n_inter > 1:
+    if n_inter > 2:
         lig_bind[t] = 1
         n_unbound = 0
     else:
         lig_bind[t] = 0
         n_unbound += 1
-    if n_unbound > frames*.2:
+    if n_unbound > 10*(frames/tot_time) and frame_unbind == 'none':
         frame_unbind = t - n_unbound
 per_bound = 100*(sum(lig_bind)/frames)
 if frame_unbind == 'none':
@@ -87,5 +89,4 @@ else:
 output = open('Ligand_bind.txt', 'w')
 output.write('Ligand bound for ' + str(per_bound) + '\n')
 output.write('Unbinding time of ' + str(t_unbind) + '\n')
-
-    
+print('Ligand binding analysis completed') 
