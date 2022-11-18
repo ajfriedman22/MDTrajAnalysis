@@ -5,67 +5,6 @@ import argparse
 import sys
 import os.path
 from itertools import product
-import matplotlib.pyplot as plt
-from scipy.stats import gaussian_kde
-from scipy import optimize
-from scipy.signal import argrelextrema
-
-def compute_max(data):
-    kde = gaussian_kde(data)
-    opt = optimize.minimize_scalar(lambda x: -kde(x))
-    samples = np.linspace(min(data), max(data), 50)
-    probs = kde.evaluate(samples)
-    maxima_index = probs.argmax()
-    maxima = samples[maxima_index]
-    
-    return maxima
-
-def plot_torsion(dihe_dist, name, i, maxima):
-    #Seperate dihedral angles
-    dihe_name = name[i]
-    
-    #Histogram of the data
-    n, bins, patches = plt.hist(dihe_dist, 30, density=True, facecolor='g', alpha=0.75)
-    #Inidcate Maxima
-    plt.axvline(x = maxima[0], color = 'k')
-    if len(maxima) == 2:
-        plt.axvline(x = maxima[1], color = 'b')
-
-    plt.xlabel('Torsional Angle(rad)')
-    plt.ylabel('Probability')
-    plt.xlim(-180, 180)
-    plt.title('Histogram of Torsion Angle ' + dihe_name)
-    plt.grid(True)
-    plt.savefig('dihedrals/dihe_angle_' + dihe_name + '.png')
-    plt.close()
-    
-def deter_multimodal(dihedrals, name, i):
-    #Seperate dihedral angles
-    dihe_name = name[i]
-    dihe_dist = dihedrals[:,i]
-    
-    #Determine maxima for probability distribution
-    maxima = compute_max(dihe_dist)
-
-    #Determine data not in the main peak
-    main_peak = []
-    second_peak = []
-    for i in dihe_dist:
-        diff = i - maxima
-        if abs(i - maxima) < 30 or abs(i + 360 - maxima) < 30 or abs(i - 360 - maxima) < 30:
-            main_peak.append(i)
-        else:
-            second_peak.append(i)
-        
-    #If greater than 3 outliers count as seperate peak
-    if len(second_peak) > (0.05*len(dihe_dist)):
-        #Determine the maxima of the two peaks individually 
-        maxima_main = compute_max(main_peak)
-        maxima_second = compute_max(second_peak)
-
-        return [maxima_main, maxima_second], dihe_dist
-    else:
-        return [maxima], dihe_dist
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
@@ -92,6 +31,12 @@ current_directory = os.path.dirname(os.path.realpath(__file__))
 prefix = current_directory.rsplit('/',1)[0]
 sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
+
+sys.path.insert(1, prefix + '/ligand_analysis/')
+import lig_motion
+
+sys.path.insert(1, prefix + '/display_data/')
+import plot
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
@@ -127,8 +72,8 @@ dihedral = dihedral*(180/np.pi)
 #Plot and print angle distribution
 dihe_max, dihe_ind = [],[]
 for i in range(len(input_ind)):
-    maxima, dihe_dist = deter_multimodal(dihedral, torsion_name, i)
-    plot_torsion(dihe_dist, torsion_name, i, maxima)
+    maxima, dihe_dist = lig_motion.deter_multimodal(dihedral, torsion_name, i)
+    plot.plot_torsion(dihe_dist, torsion_name, i, maxima)
     #If multiple peaks add to dihe_max array
     if len(maxima) >= 2:
         dihe_max.append(maxima)
