@@ -45,7 +45,7 @@ sections = open(sect, 'r').readlines()
 
 #Loop through sections of interest
 for i in range(len(sections)):
-    name1, name2, sect1, sect2 = load_data.read_sections(sections, i, miss_res, num_prot_res)
+    name1, name2, sect1, sect2 = load_data.read_sections(sections, i, miss_res, num_prot_res, 2)
     res_pairs = list(product(sect1, sect2))
 
     [dist, pairs] = md.compute_contacts(traj_ns, contacts=res_pairs, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
