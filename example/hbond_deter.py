@@ -31,7 +31,7 @@ sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 
 sys.path.insert(1, prefix + '/protein_analysis/')
-import hbond
+import hbond_analysis
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
@@ -57,6 +57,6 @@ for hbond in hbonds:
 file_object.close() #close file
 
 #Determine the exact percentage of time that each h-bond present for >60% of the trajectory is formed
-per = hbond.bond_per(traj_ns, hbonds)
+per = hbond_analysis.bond_per(traj_ns, hbonds)
 np.savetxt('Hbonds_per.txt', per)
 print('Hbond Percentages Calculated and Output')
