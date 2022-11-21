@@ -61,7 +61,7 @@ file_dssp = open('DSSP_'+ name + '.txt','w') #Create output file for DSSP and wr
 dssp_res_mod = prot_struct.dssp_remove_space(dssp_list, 'l')
 
 #Output DSSP to file
-frame_uncorr, residue = dssp_uncorr.shape
+frame_uncorr, residue = dssp_res_mod.shape
 for i in range(frame_uncorr): #Each row is a single frame
     for j in range(residue):#Each column is a residue in the a7 helix
         file_dssp.write(dssp_res_mod[i,j] + ' ')
@@ -72,3 +72,4 @@ file_dssp.close() #close file
 np.savetxt('phi_' + name + '.txt', phi_angle)
 np.savetxt('psi_' + name + '.txt', psi_angle)
 
+print('DSSP Calculated and File Written')
