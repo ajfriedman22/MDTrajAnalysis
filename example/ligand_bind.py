@@ -16,6 +16,7 @@ parser.add_argument('-l', required=True, type = int, help= 'Ligand residue numbe
 parser.add_argument('-ln', required=False, default = 'LIG', type = str, help= 'Ligand name in GRO file')
 parser.add_argument('-bind', required=True, help= 'File containing residues refingin bound state')
 parser.add_argument('-n', required=True, type = int, help= 'Total time of trajectory(ns)')
+parser.add_argument('-lref', required=False, type=str, default = 'none', help='Reference structure for Ligand COM RMSD')
 
 #Import Arguments
 args = parser.parse_args()
@@ -32,12 +33,19 @@ res_bind_file = args.bind
 if res_bind_file.split('.')[-1] != 'txt': #Add default file extension if not in input
     res_bind_file = res_bind_file + '.txt'
 tot_time = args.n
+lig_ref = args.lref
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
 prefix = current_directory.rsplit('/',1)[0]
 sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
+
+sys.path.insert(1, prefix + '/protein_inter/')
+import process_traj
+
+sys.path.insert(1, prefix + '/ligand_analysis/')
+import lig_motion
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
@@ -90,3 +98,27 @@ output = open('Ligand_bind.txt', 'w')
 output.write('Ligand bound for ' + str(per_bound) + '\n')
 output.write('Unbinding time of ' + str(t_unbind) + '\n')
 print('Ligand binding analysis completed') 
+
+#Compute Ligand COM RMSD
+if lig != 'none':
+    #Load reference
+    ref_ns = load_data.load_ref(lig_ref, '(backbone or resname ' + lig)
+    traj_ns = traj_uncorr.atom_slice(traj_uncorr.topology.select('(backbone or resname ' + lig))
+    ref_top = ref_ns.topology
+    top_ns = traj_ns.topology
+
+    traj_ns_align = traj_uncorr.superpose(ref_ns)
+    
+    displacment, lig_rmsd = lig_motion.com_rmsd(ref_ns, traj_ns_align, lig)
+    
+    #Output COM RMSD
+    output = open('lig_com_rmsd_' + lig_name + '.txt', 'w')
+    output.write(str(lig_rmsd))
+    
+    #Output displacment for bootstrapping
+    np.savetxt('lig_com_dis_' + lig_name + '.txt', displacment)
+
+    print('Ligand COM RMSD Completed')
+    #Delete unneeded arays
+    del displacment
+

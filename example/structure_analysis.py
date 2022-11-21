@@ -164,7 +164,7 @@ if lig != 'none':
     top_ns = traj_ns.topology
 
     #Remove uncorrelated frames
-    remove_uncorr('uncorrelated_frames.txt', traj_ns)
+    traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj_ns)
 
     traj_ns_align = traj_uncorr.superpose(ref_ns)
     
