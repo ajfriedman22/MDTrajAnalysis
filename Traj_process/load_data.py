@@ -93,8 +93,9 @@ def lig_check(lig, miss_res, traj_ns, name):
     return lig_res
 
 def remove_uncorr(file_name, traj):
-    import np as numpy
+    import numpy as np
     import mdtraj as md
+    import os.path
 
     #Limit trajectory to uncorrelated frames
     if os.path.exists(file_name):
