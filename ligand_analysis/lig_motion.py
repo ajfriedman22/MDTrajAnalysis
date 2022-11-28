@@ -3,17 +3,17 @@ def com_rmsd(ref, traj, lig):
     import math
     import numpy as np
 
+    #Align trajectory to reference
+    traj_align = traj.superpose(ref)
+
     #seperate ligand carbon atoms
     lig_only_ref = ref.atom_slice(ref.topology.select('resname ' + str(lig))) #reference
-    lig_only_traj = traj.atom_slice(traj.topology.select('resname ' + str(lig))) #trajectory
+    lig_only_traj = traj_align.atom_slice(traj_align.topology.select('resname ' + str(lig))) #trajectory
 
-    lig_only_ref_top = lig_only_ref.topology
-    lig_only_traj_top = lig_only_traj.topology
-        
     #Compute COM of ligand
     com = md.compute_center_of_mass(lig_only_traj)
     com_ref = md.compute_center_of_mass(lig_only_ref)
-        
+
     #Compute displacment
     time, dim = np.shape(com)
     displacment = np.zeros(time)
@@ -21,7 +21,7 @@ def com_rmsd(ref, traj, lig):
         displacment[j] = (com[j][0] - com_ref[0][0])**2 + (com[j][1] - com_ref[0][1])**2 + (com[j][2] - com_ref[0][2])**2
 
     lig_rmsd = math.sqrt(np.mean(displacment))
-    
+
     return displacment, lig_rmsd
 
 def deter_multimodal(dihedrals, name, i):
