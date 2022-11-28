@@ -63,10 +63,10 @@ top = traj.topology
 offset = 1 + miss_res
 
 #Add label to files if the trajectory is not equilibrated
-if eq_time == 0:
+if eq_time != 0:
     name_add = ''
 else:
-    name_add = 'unequil'
+    name_add = '_unequil'
 
 #Compute full BB RMSD
 if ref != 'none':
@@ -157,18 +157,18 @@ else:
 #Compute Ligand COM RMSD
 if lig != 'none':
     #Load reference
-    aa_atom_ref = aa_atom - 1
-    ref_ns = load_data.load_ref(lig_ref, '(backbone and index <= ' + str(aa_atom) + ') or resname ' + lig)
-    traj_ns = traj.atom_slice(top.select('(backbone and index <= ' + str(aa_atom) + ') or resname ' + lig))
-    ref_top = ref_ns.topology
-    top_ns = traj_ns.topology
+    if aa_atom != 0:
+        ref_ns = load_data.load_ref(lig_ref, '(backbone and index <= ' + str(aa_atom) + ') or resname ' + lig)
+        traj_ns = traj.atom_slice(traj.topology.select('(backbone and index <= ' + str(aa_atom) + ') or resname ' + lig))
+    else:
+        ref_ns = load_data.load_ref(lig_ref, 'backbone or resname ' + lig)
+        traj_ns = traj.atom_slice(traj.topology.select('backbone or resname ' + lig))
 
     #Remove uncorrelated frames
     traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj_ns)
-
-    traj_ns_align = traj_uncorr.superpose(ref_ns)
     
-    displacment, lig_rmsd = lig_motion.com_rmsd(ref_ns, traj_ns_align, lig)
+    #Comput Ligand COM displacment and RMSD
+    displacment, lig_rmsd = lig_motion.com_rmsd(ref_ns, traj_uncorr, lig)
     
     #Output COM RMSD
     output = open('lig_com_rmsd_' + lig_name + '.txt', 'w')
@@ -188,11 +188,10 @@ else:
 if lig != 'none':
     #Load reference
     ref_bb = load_data.load_ref(lig_ref, 'backbone or resname ' + lig)
-    ref_top = ref_bb.topology
     
     #Seperate Ligand heavy atoms
-    ref_sect = ref_bb.atom_slice(ref_top.select("resname " + lig)) #Limit trajectory to the section of choice
-    traj_sect = traj.atom_slice(top.select('resname ' + lig)) #Limit trajectory to the section of choice
+    ref_sect = ref_bb.atom_slice(ref_bb.topology.select('resname ' + lig)) #Limit trajectory to the section of choice
+    traj_sect = traj_uncorr.atom_slice(traj_uncorr.topology.select('resname ' + lig)) #Limit trajectory to the section of choice
 
     #Compute RMSD for section of interest
     rmsd_sect_uncorr, t_sect = process_traj.compute_rmsd(traj_sect, ref_sect)

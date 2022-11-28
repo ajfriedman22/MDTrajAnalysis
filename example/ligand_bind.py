@@ -49,11 +49,7 @@ import lig_motion
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
-traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
-top = traj_ns.topology
-del traj; del traj_uncorr
-print('Trajectory Loaded')
+traj_ns = traj.atom_slice(traj.topology.select('backbone or resname ' + lig_name))
 
 #Determine indices of protein and ligand residues in topology
 lig_res = load_data.lig_check(lig, miss_res, traj_ns, lig_name)
@@ -88,6 +84,9 @@ for t in range(frames):
         n_unbound += 1
     if n_unbound > 10*(frames/tot_time) and frame_unbind == 'none':
         frame_unbind = t - n_unbound
+#Adjust for immediate unbinding
+if frame_unbind != 'none' and int(frame_unbind) < 1:
+    frame_unbind = (5/tot_time) * frames
 per_bound = 100*(sum(lig_bind)/frames)
 if frame_unbind == 'none':
     t_unbind = tot_time
@@ -100,25 +99,29 @@ output.write('Unbinding time of ' + str(t_unbind) + '\n')
 print('Ligand binding analysis completed') 
 
 #Compute Ligand COM RMSD
-if lig != 'none':
+if lig_ref != 'none':
     #Load reference
-    ref_ns = load_data.load_ref(lig_ref, '(backbone or resname ' + lig)
-    traj_ns = traj_uncorr.atom_slice(traj_uncorr.topology.select('(backbone or resname ' + lig))
-    ref_top = ref_ns.topology
-    top_ns = traj_ns.topology
-
-    traj_ns_align = traj_uncorr.superpose(ref_ns)
+    ref_ns = load_data.load_ref(lig_ref, 'backbone or resname ' + lig_name)
     
-    displacment, lig_rmsd = lig_motion.com_rmsd(ref_ns, traj_ns_align, lig)
+    #Limit trajectory to bound frames
+    if frame_unbind != 'none':
+        ind_bind = np.linspace(1, frame_unbind, num=frame_unbind-1, dtype=int)
+        traj_bind = traj_ns.slice(ind_bind)
+    else:
+        traj_bind = traj_ns
+    
+    #Compute Ligand COM displacment and RMSD
+    displacment, lig_rmsd = lig_motion.com_rmsd(ref_ns, traj_bind, lig_name)
     
     #Output COM RMSD
-    output = open('lig_com_rmsd_' + lig_name + '.txt', 'w')
+    output = open('lig_com_bind_' + lig_name + '.txt', 'w')
     output.write(str(lig_rmsd))
     
     #Output displacment for bootstrapping
-    np.savetxt('lig_com_dis_' + lig_name + '.txt', displacment)
+    np.savetxt('lig_com_dis_bind_' + lig_name + '.txt', displacment)
 
     print('Ligand COM RMSD Completed')
+    
     #Delete unneeded arays
     del displacment
 

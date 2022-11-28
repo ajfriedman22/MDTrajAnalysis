@@ -34,7 +34,7 @@ import load_data
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj_ns)
+traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)
 traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
 top = traj_ns.topology
 prot_traj = traj_ns.atom_slice(top.select('protein'))

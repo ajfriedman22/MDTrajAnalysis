@@ -61,10 +61,12 @@ file_dssp = open('DSSP_'+ name + '.txt','w') #Create output file for DSSP and wr
 dssp_res_mod = prot_struct.dssp_remove_space(dssp_list, 'l')
 
 #Output DSSP to file
-frame_uncorr, residue = dssp_res_mod.shape
+frame_uncorr = len(dssp_res_mod)
+residue = len(dssp_res_mod[0])
 for i in range(frame_uncorr): #Each row is a single frame
+    dssp_i = dssp_res_mod[i]
     for j in range(residue):#Each column is a residue in the a7 helix
-        file_dssp.write(dssp_res_mod[i,j] + ' ')
+        file_dssp.write(dssp_i[j] + ' ')
     file_dssp.write('\n') #New line between each time frame
 file_dssp.close() #close file
     

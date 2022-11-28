@@ -38,7 +38,6 @@ traj = load_data.mdtraj_load(File_traj, File_gro)
 traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
 traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
 del traj; del traj_uncorr #Save space
-print('Trajectory Loaded')
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res

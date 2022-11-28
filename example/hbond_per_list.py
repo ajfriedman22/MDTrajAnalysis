@@ -31,7 +31,7 @@ import load_data
 import data_process 
 
 sys.path.insert(1, prefix + '/protein_analysis/')
-import hbond
+import hbond_analysis
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
@@ -42,9 +42,6 @@ del traj; del traj_uncorr
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
-
-print('Trajectory Loaded')
-
 
 #Make array for bond names from input file
 name_bonds = []
@@ -83,10 +80,10 @@ bond_single_frac = np.zeros((num_bonds))
 for i in range(num_bonds):
     #If h-bond is between residues present in trajectory
     if int(res1[i]) >= 0 and int(res2[i]) >= 0 and int(res1[i]) < (traj_prot.n_residues-1) and int(res2[i]) < (traj_prot.n_residues-1):
-        donor, acceptor, H = hbond.deter_bond(top, res1, res2, name1, name2, i)
+        donor, acceptor, H = hbond_analysis.deter_bond(top, res1, res2, name1, name2, i)
 
         #Determine hydrogen with minimum distance
-        H_min, dist = hbond.deter_H(acceptor, H, traj_prot)
+        H_min, dist = hbond_analysis.deter_H(acceptor, H, traj_prot)
 
         #Determine angle b/w donor and acceptor
         bond_a = np.array([[donor[0], H_min, acceptor[0]]])
