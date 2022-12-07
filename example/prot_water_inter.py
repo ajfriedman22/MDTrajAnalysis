@@ -41,13 +41,12 @@ prefix = current_directory.rsplit('/',1)[0]
 sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 
-sys.path.insert(1, prefix + '/protein_inter/')
+sys.path.insert(1, prefix + '/protein_analysis/')
 import water_inter
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
 traj_ns = traj.remove_solvent()
-print(traj)
 
 if frame_cen != 0:
     cen_ind = []#Set aray for atom indices of water molecules for centroid
@@ -120,7 +119,6 @@ for i in range(len(res_interest)):
                         cen_ind.append(0)
 
             per_wat_contact[i][j] = np.round(100*count/frames, decimals = 2)
-print(cen_ind)
 print('Contacts Calculated')
 
 #Print all present contacts to file
