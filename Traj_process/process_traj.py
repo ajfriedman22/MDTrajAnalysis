@@ -27,7 +27,7 @@ def equil_deter(rmsd, t_max, output_ns):
             count += 1
         else:
             count = 0
-        if count > 100:
+        if count > 50:
             eq_time = 5 * (round(time[i-50]/5) + (time[i-50] % 5 > 0)) #round up to nearest 5 ns
             start_i = i-50
             break
@@ -38,6 +38,7 @@ def equil_deter(rmsd, t_max, output_ns):
         return eq_time
     else:
         return start_i
+
 #Determine the indices for uncorrelated data
 #Input: data = input data
 #Output: t_uncorr = indices of the uncorrelated data
@@ -54,10 +55,10 @@ def uncorr_ind(data):
 
     #Apply ruptures to find uncorrelated samples
     model = 'l1'
-    algo = rpt.Binseg(model=model, min_size=10, jump=10).fit(raw)
+    algo = rpt.Binseg(model=model).fit(raw)
     n = len(raw)
     sigma = stdev(raw)
-    t_uncorr = algo.predict(epsilon=3 * n * sigma ** 2)
+    t_uncorr = algo.predict(pen = np.log(n) * sigma**2)
 
     return t_uncorr
 
