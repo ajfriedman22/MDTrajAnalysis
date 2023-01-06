@@ -56,7 +56,7 @@ if file_ind != 'default':
     for i in range(len(input_ind)):
         line = input_ind[i].split()
         lig_sp2_ind[i] = int(line[1])-offset
-elif lig == 'AD' or lig == 'AB':
+elif lig == 'AD' or lig == 'AB' or lig == 'ABB':
     #Name of SP2 Carbons for common ligands
     if lig == 'AD':
         sp2_name = ['C10', 'C11', 'C14', 'C15']
