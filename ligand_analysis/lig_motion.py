@@ -25,15 +25,20 @@ def com_rmsd(ref, traj, lig):
     return displacment, lig_rmsd
 
 def deter_multimodal(dihedrals, name, i):
-    sys.path.insert(1, '../Traj_process/')
-    import process_data
+    import sys
+    import os.path
+    current_directory = os.path.dirname(os.path.realpath(__file__))
+    prefix = current_directory.rsplit('/',1)[0]
+    print(prefix)
+    sys.path.insert(1, prefix + '/Traj_process/')
+    import data_process
 
     #Seperate dihedral angles
     dihe_name = name[i]
     dihe_dist = dihedrals[:,i]
     
     #Determine maxima for probability distribution
-    maxima = process_data.compute_max(dihe_dist)
+    maxima = data_process.compute_max(dihe_dist)
 
     #Determine data not in the main peak
     main_peak = []
@@ -48,8 +53,8 @@ def deter_multimodal(dihedrals, name, i):
     #If greater than 3 outliers count as seperate peak
     if len(second_peak) > (0.05*len(dihe_dist)):
         #Determine the maxima of the two peaks individually 
-        maxima_main = process_data.compute_max(main_peak)
-        maxima_second = process_data.compute_max(second_peak)
+        maxima_main = data_process.compute_max(main_peak)
+        maxima_second = data_process.compute_max(second_peak)
 
         return [maxima_main, maxima_second], dihe_dist
     else:

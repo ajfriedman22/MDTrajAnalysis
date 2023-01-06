@@ -47,3 +47,25 @@ def deter_H(acceptor, H, traj_ns):
 
     return H_min, dist
 
+def hbond_read(bond, offset):
+    import sys
+    import os.path
+    
+    sys.path.insert(1, '../Traj_process/')
+    import data_process 
+
+    line = data_process.split(bond)
+
+    #Determine indicise of dashed
+    ind = []
+    for j in range(len(line)):
+        if line[j] == '-':
+            ind.append(j)
+    res1 = str(int(data_process.sep_num(data_process.convert(line[0:ind[0]]))) - offset)
+    name1 = ''.join([i for i in data_process.convert(line[0:ind[0]]) if not i.isdigit()])
+    atom_name1 = data_process.convert(line[ind[0]+1:ind[1]]).strip()
+    res2 = str(int(data_process.sep_num(data_process.convert(line[ind[2]+1:ind[3]]))) - offset)
+    name2 = ''.join([i for i in data_process.convert(line[ind[2]+1:ind[3]]) if not i.isdigit()])
+    atom_name2 = data_process.convert(line[ind[3]+1:]).strip()
+    
+    return res1, atom_name1, name1, res2, atom_name2, name2
