@@ -69,7 +69,7 @@ else:
     name_add = '_unequil'
 
 #Compute full BB RMSD
-if ref != 'none':
+if ref != 'none' and ref_name == 'self':
     #Load reference
     if aa_atom != 0:
         ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom))
@@ -77,13 +77,14 @@ if ref != 'none':
     else:
         ref_bb = load_data.load_ref(ref, 'backbone')
         traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein only
+    
     #Calculate RMSF from reference structure
     rmsf_data = md.rmsf(traj_bb, ref_bb, parallel=True, precentered=False)
 
     #Calculate RMSD for full protein relative to reference structure
     rmsd_full_uncorr, t_full = process_traj.compute_rmsd(traj_bb, ref_bb)
     
-    if aa_atom  != 0 and ref2 != 'none':
+    if aa_atom  != 0:
         ref2_bb = load_data.load_ref(ref, 'backbone and index > ' + str(aa_atom))
         traj2_bb = traj.atom_slice(top.select('backbone and index > ' + str(aa_atom))) #Backbond atoms of protein 1 only
         #Calculate RMSF from reference structure
@@ -93,7 +94,7 @@ if ref != 'none':
         rmsd_full_uncorr2, t_full = process_traj.compute_rmsd(traj2_bb, ref2_bb)
 
     #Only save RMSD and RMSF values to file for equilibrated input trajectories
-    if eq_time != 0 and ref_name == 'self':
+    if eq_time != 0:
         np.savetxt('rmsd_full_ref_' + str(ref_name) + '.txt', rmsd_full_uncorr) #save to text file
         np.savetxt('rmsf_ref_' + str(ref_name) + '.txt', rmsf_data) #save to text file
         if aa_atom != 0 and ref2 != 'none':

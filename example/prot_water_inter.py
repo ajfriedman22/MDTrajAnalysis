@@ -19,6 +19,7 @@ parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-l', required=False, type=int, default = 0, help= 'Ligand residue ID')
+parser.add_argument('-ln', required=False, type=str, default = 'LIG', help= 'Ligand name')
 parser.add_argument('-sect', required=True, help= 'File containing sections of interest(txt)')
 parser.add_argument('-f', required=False, type=int, default = 0, help= 'Frame for centroid output water molecule indices')
 
@@ -32,6 +33,7 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 miss_res = args.m
 lig = args.l
+lig_name = args.ln
 sect_name = args.sect
 frame_cen = args.f
 
@@ -69,7 +71,7 @@ res_interest.sort()
 
 if lig != 0:
     #Test that ligand ID Assigned properly
-    test = traj_ns.topology.select('resid ' + str(lig-offset) + ' and resname LIG')
+    test = traj_ns.topology.select('resid ' + str(lig-offset) + ' and resname ' + lig_name)
     if test.size==0:
         print('Ligand not named correctly! Exiting Immediately!')
         exit()
