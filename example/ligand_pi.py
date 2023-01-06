@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser(description = 'Determination of Pi stacking int
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-l', required=False, type=str, default = 0, help= 'Ligand residue name')
-parser.add_argument('-ind', required=True, help= 'File containing atom indices for ligand torsions(txt)')
+parser.add_argument('-ind', required=False, default='default', help= 'File containing atom indices for ligand torsions(txt)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Missing N-terminal protein residues')
 
 #Import Arguments
@@ -24,7 +24,7 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 lig = args.l
 file_ind = args.ind
-if file_ind.split('.')[-1] != 'txt': #Add default file extension if not in input
+if file_ind.split('.')[-1] != 'txt' and file_ind != 'default': #Add default file extension if not in input
     file_ind = file_ind + '.txt'
 miss_res = args.m
 
@@ -50,17 +50,30 @@ del traj; del traj_ns
 offset = 1
 
 #Load atom indices for ring atoms
-input_ind = open(file_ind, 'r').readlines()
-lig_ring_ind = np.zeros(len(input_ind))
-for i in range(len(input_ind)):
-    line = input_ind[i].split()
-    lig_ring_ind[i] = int(line[1])-offset
-
+if file_ind != 'default':
+    input_ind = open(file_ind, 'r').readlines()
+    lig_sp2_ind = np.zeros(len(input_ind))
+    for i in range(len(input_ind)):
+        line = input_ind[i].split()
+        lig_sp2_ind[i] = int(line[1])-offset
+elif lig == 'AD' or lig == 'AB':
+    #Name of SP2 Carbons for common ligands
+    if lig == 'AD':
+        sp2_name = ['C10', 'C11', 'C14', 'C15']
+    else:
+        sp2_name = ['C2', 'C3', 'C11', 'C12']
+    #Determin indices of sp2 carbons
+    lig_sp2_ind = np.zeros(len(sp2_name))
+    for i in range(len(sp2_name)):
+        atom_id = traj_uncorr.topology.select('resname ' + lig + ' and name ' + sp2_name[i])
+        lig_sp2_ind[i] = int(atom_id[0])
+else:
+    print('Atom Indices for ligand SP2 Carbons Need Supplied')
 #Check that atom indices are for ligand
 lig_atom = traj_uncorr.topology.select('resname ' + lig)
 min_lig = min(lig_atom)
 max_lig = max(lig_atom)
-if ((min_lig <= lig_ring_ind) & (max_lig >= lig_ring_ind)).all():
+if ((min_lig <= lig_sp2_ind) & (max_lig >= lig_sp2_ind)).all():
     print('All atoms in ligand')
 else:
     print('Atoms outside range for ligand! Exiting immediately!')
@@ -94,11 +107,9 @@ pi_tot = np.zeros(time) #Total number of pi-stacking interactions in each frame
 pi_res_per = np.zeros(num_ring_res)
 for r in range(num_ring_res): #For a pi-stacking interaction to be present three distances must be less than 4A
     res_ring_ind = prot_ring_ind[r,:]
-    pair = list(product(res_ring_ind, lig_ring_ind))
-    num_pair = len(res_ring_ind)*len(lig_ring_ind)
+    pair = list(product(res_ring_ind, lig_sp2_ind))
+    num_pair = len(res_ring_ind)*len(lig_sp2_ind)
     dist = md.compute_distances(traj_uncorr, pair)
-    if r == num_ring_res - 1:
-        print(dist)
     for t in range(time):
         sp2_contact = 0
         for j in range(num_pair):
