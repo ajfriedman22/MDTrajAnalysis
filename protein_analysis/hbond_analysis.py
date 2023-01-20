@@ -15,14 +15,14 @@ def bond_per(traj_ns, hbonds):
         per.append(100*count/num_t) #Percentage of time each h-bond is present in trajectory
     return per
 
-def deter_bond(top, res1, res2, name1, name2, i):
+def deter_bond(top, res1, res2, name1, name2):
     import numpy as np
     import mdtraj as md
 
     bond = np.zeros(3)
-    donor = top.select('resid ' + str(res1[i]) + ' and name ' + str(name1[i]))
-    acceptor = top.select('resid ' + str(res2[i]) + ' and name ' + str(name2[i]))
-    H = top.select("resid " + str(res1[i]) + " and element H")
+    donor = top.select('resid ' + str(res1) + ' and name ' + str(name1))
+    acceptor = top.select('resid ' + str(res2) + ' and name ' + str(name2))
+    H = top.select("resid " + str(res1) + " and element H")
     return donor, acceptor, H
 
 def deter_H(acceptor, H, traj_ns):
@@ -69,3 +69,21 @@ def hbond_read(bond, offset):
     atom_name2 = data_process.convert(line[ind[3]+1:]).strip()
     
     return res1, atom_name1, name1, res2, atom_name2, name2
+
+#Seperate residue names and numbers from MDTraj formmetted h-bonds
+def process_bond(bond, offset):
+    import sys
+    sys.path.insert(1, '../Traj_process/')
+    import data_process 
+
+    line = data_process.split(bond.strip())
+    #Determine indicise of dashed
+    ind = []
+    for j in range(len(line)):
+        if line[j] == '-':
+            ind.append(j)
+    res1 = str(int(data_process.sep_num(data_process.convert(line[0:ind[0]]))) - offset)
+    name1 = data_process.convert(line[ind[0]+1:ind[1]]).strip()
+    res2 = str(int(data_process.sep_num(data_process.convert(line[ind[2]+1:ind[3]]))) - offset)
+    name2 = data_process.convert(line[ind[3]+1:]).strip()
+    return res1, name1, res2, name2
