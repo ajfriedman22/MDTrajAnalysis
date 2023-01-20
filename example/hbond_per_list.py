@@ -80,7 +80,7 @@ bond_single_frac = np.zeros((num_bonds))
 for i in range(num_bonds):
     #If h-bond is between residues present in trajectory
     if int(res1[i]) >= 0 and int(res2[i]) >= 0 and int(res1[i]) < (traj_prot.n_residues-1) and int(res2[i]) < (traj_prot.n_residues-1):
-        donor, acceptor, H = hbond_analysis.deter_bond(top, res1, res2, name1, name2, i)
+        donor, acceptor, H = hbond_analysis.deter_bond(top, res1[i], res2[i], name1[i], name2[i])
 
         #Determine hydrogen with minimum distance
         H_min, dist = hbond_analysis.deter_H(acceptor, H, traj_prot)

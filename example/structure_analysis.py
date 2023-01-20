@@ -111,7 +111,7 @@ else:
     print('Full BB RMSD Skipped')
 
 #Compute BB RMSD by sections
-if rmsd_sect != 'none':
+if ref != 'none' and rmsd_sect != 'none':
     #Load reference
     traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein 1 only
     ref_bb = load_data.load_ref(ref, 'backbone')

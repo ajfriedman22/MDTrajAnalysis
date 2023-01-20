@@ -113,7 +113,7 @@ for r in range(num_ring_res): #For a pi-stacking interaction to be present three
     for t in range(time):
         sp2_contact = 0
         for j in range(num_pair):
-            if dist[t, j] < 0.5:
+            if dist[t, j] < 0.45:
                 sp2_contact += 1
         if sp2_contact > 2:
             pi_tot[t] += 1 #Add to count of total pi-stacking
