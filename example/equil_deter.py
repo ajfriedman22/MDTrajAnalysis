@@ -16,7 +16,9 @@ file_name = args.n
 t_max = args.t
 
 #Import custom modules
-sys.path.insert(1,'/home/anika/Documents/code/MDTrajAnalysis/Traj_process')
+file_path = sys.path[0]
+repo_path = file_path.rsplit('/',1)[0]
+sys.path.insert(1, repo_path + '/Traj_process')
 import process_traj
 import load_data
 
@@ -24,5 +26,6 @@ t, rmsd = load_data.col2_float_data('.', file_name, False)
 
 eq_time = process_traj.equil_deter(rmsd, t_max, True)
 
-print(eq_time)
-
+#Save equilibration time to file
+output = open('equilibration_time.txt', 'w')
+output.write('Equilibration time = ' + str(eq_time) + ' ns')
