@@ -2,7 +2,7 @@
 
 #Determine equilibration point for trajectory
 #Input: rmsd = BB RMSD for the full trajectory in nm; t_max = length of trajectory in ns) 
-def equil_deter(rmsd, t_max, output_ns):
+def equil_deter(rmsd, t_max, output_ns=True):
     import numpy as np
 
     #Average rmsd every 200 ps
@@ -32,7 +32,7 @@ def equil_deter(rmsd, t_max, output_ns):
             start_i = i-50
             break
     if eq_time == 'NA':
-        print('equilibrium not reched')
+        raise Exception('equilibrium not reched')
 
     if output_ns == True:
         return eq_time
