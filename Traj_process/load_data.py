@@ -67,7 +67,7 @@ def read_sections(sections, i, miss_res, num_prot_res, num_sect):
         sect2_start = 1 
         sect2_end = num_prot_res
     else:
-        print('Error in input file!')
+        print('Error in sections input file!')
         exit()
 
     #Compute distance between all residues in sect1 and sect2

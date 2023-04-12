@@ -29,8 +29,13 @@ def deter_H(acceptor, H, traj_ns):
     import numpy as np
     import mdtraj as md
     from itertools import product
+    import sys
 
-    #easure distance between all hydrogens and the acceptor atom
+    #Check that multiple acceptor H pairs submitted
+    if len(acceptor) == 0 or len(H) == 0:
+        print('Error either Acceptors or Hydrogen list is Empty')
+        sys.exit()
+    #Measure distance between all hydrogens and the acceptor atom
     bond_d = list(product(acceptor, H))
     dist_all = md.compute_distances(traj_ns, bond_d, periodic = False)
     

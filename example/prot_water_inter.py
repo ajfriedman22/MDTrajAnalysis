@@ -128,9 +128,8 @@ n = 0
 for i in range(len(res_interest)):
     for j in range(len(res_interest)):
         if j < i:
-            if per_wat_contact[i][j] > 25:
-                output.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(per_wat_contact[i][j]) + '\n')
-                output_cen.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(cen_ind[n]) + '\n')
+            output.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(per_wat_contact[i][j]) + '\n')
+            output_cen.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(cen_ind[n]) + '\n')
             n += 1
         else:
             break
