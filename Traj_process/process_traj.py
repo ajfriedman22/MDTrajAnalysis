@@ -2,8 +2,10 @@
 
 #Determine equilibration point for trajectory
 #Input: rmsd = BB RMSD for the full trajectory in nm; t_max = length of trajectory in ns) 
-def equil_deter(rmsd, t_max, threshold=0.1, per=0.1, output_ns=True):
+def equil_deter(rmsd, t_max, threshold=0.1, per=10, output_ns=True):
     import numpy as np
+    
+    per = per/100
 
     #Average rmsd every 200 ps
     int_per_ns = int(len(rmsd)/(t_max))
