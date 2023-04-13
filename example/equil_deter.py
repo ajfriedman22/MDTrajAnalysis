@@ -27,7 +27,7 @@ sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 import process_traj
 
-t, rmsd = load_data.col2_float_data('.', file_name, False)
+t, rmsd = load_data.col2_float_data('.', file_name, True)
 
 eq_time = process_traj.equil_deter(rmsd, t_max, threshold, per, True)
 
