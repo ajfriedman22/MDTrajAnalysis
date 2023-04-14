@@ -21,16 +21,10 @@ per = args.p
 threshold = args.l
 
 #Import custom modules
-<<<<<<< HEAD
-file_path = sys.path[0]
-repo_path = file_path.rsplit('/',1)[0]
-sys.path.insert(1, repo_path + '/Traj_process')
-=======
 current_directory = os.path.dirname(os.path.realpath(__file__))
 prefix = current_directory.rsplit('/',1)[0]
 sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
->>>>>>> 10e4a8adc438eba200e5a983c50b9ba2d79715a5
 import process_traj
 
 t, rmsd = load_data.col2_float_data('.', file_name, True)
@@ -38,9 +32,6 @@ t, rmsd = load_data.col2_float_data('.', file_name, True)
 eq_time = process_traj.equil_deter(rmsd, t_max, threshold, per, True)
 
 #Save equilibration time to file
-output = open('equilibration_time.txt', 'w')
-output.write('Equilibration time = ' + str(eq_time) + ' ns')
-=======
 eq_time = [int(eq_time)]
 np.savetxt('equilibration_time.txt', eq_time)
 print('Equilibration analysis completed')
