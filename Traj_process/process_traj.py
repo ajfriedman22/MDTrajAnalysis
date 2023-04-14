@@ -9,8 +9,8 @@ def equil_deter(rmsd, t_max, threshold=0.1, per=10, output_ns=True):
 
     #Average rmsd every 200 ps
     int_per_ns = int(len(rmsd)/(t_max))
-    rmsd_max = np.zeros(t_max*5)
-    rmsd_min = np.zeros(t_max*5)
+    rmsd_max = np.zeros(np.round(t_max*5))
+    rmsd_min = np.zeros(np.round(t_max*5))
     n=0
 
     for i in range(len(rmsd_max)):
