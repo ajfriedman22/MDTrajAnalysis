@@ -32,6 +32,9 @@ sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 import process_traj
 
+sys.path.insert(1, prefix + '/protein_analysis/')
+import prot_struct
+
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
 traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
@@ -55,13 +58,15 @@ dssp_list = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all r
 file_dssp = open('DSSP_'+ name + '.txt','w') #Create output file for DSSP and write over if file is present
 
 #Replace blank spaces with 'l' for loop to avoid output confusion
-dssp_res_mod = dssp_remove_space(dssp_list, 'l')
+dssp_res_mod = prot_struct.dssp_remove_space(dssp_list, 'l')
 
 #Output DSSP to file
-frame_uncorr, residue = dssp_uncorr.shape
+frame_uncorr = len(dssp_res_mod)
+residue = len(dssp_res_mod[0])
 for i in range(frame_uncorr): #Each row is a single frame
+    dssp_i = dssp_res_mod[i]
     for j in range(residue):#Each column is a residue in the a7 helix
-        file_dssp.write(dssp_res_mod[i,j] + ' ')
+        file_dssp.write(dssp_i[j] + ' ')
     file_dssp.write('\n') #New line between each time frame
 file_dssp.close() #close file
     
@@ -69,3 +74,4 @@ file_dssp.close() #close file
 np.savetxt('phi_' + name + '.txt', phi_angle)
 np.savetxt('psi_' + name + '.txt', psi_angle)
 
+print('DSSP Calculated and File Written')

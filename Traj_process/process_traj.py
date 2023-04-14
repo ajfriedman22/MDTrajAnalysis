@@ -2,8 +2,10 @@
 
 #Determine equilibration point for trajectory
 #Input: rmsd = BB RMSD for the full trajectory in nm; t_max = length of trajectory in ns) 
-def equil_deter(rmsd, t_max, output_ns):
+def equil_deter(rmsd, t_max, threshold=0.1, per=10, output_ns=True):
     import numpy as np
+    
+    per = per/100
 
     #Average rmsd every 200 ps
     int_per_ns = int(len(rmsd)/(t_max))
@@ -16,6 +18,8 @@ def equil_deter(rmsd, t_max, output_ns):
         rmsd_max[i] = max(rmsd[n:k])
         rmsd_min[i] = min(rmsd[n:k])
         n = k
+    #Set count limit
+    count_lim = int(len(rmsd)*per)
 
     #Determine Equilibration time
     time = np.linspace(0, t_max, num = len(rmsd_max))
@@ -23,21 +27,22 @@ def equil_deter(rmsd, t_max, output_ns):
     count = 0
     for i in range(1, len(rmsd_max)):
         diff = abs(rmsd_max[i] - rmsd_min[i-1])
-        if diff < 0.1:
+        if diff < threshold:
             count += 1
         else:
             count = 0
-        if count > 100:
-            eq_time = 5 * (round(time[i-50]/5) + (time[i-50] % 5 > 0)) #round up to nearest 5 ns
-            start_i = i-50
+        if count > count_lim:
+            eq_time = 5 * (round(time[i-count_lim]/5) + (time[i-count_lim] % 5 > 0)) #round up to nearest 5 ns
+            start_i = i-count_lim
             break
     if eq_time == 'NA':
-        print('equilibrium not reched')
+        raise Exception('equilibrium not reched')
 
     if output_ns == True:
         return eq_time
     else:
         return start_i
+
 #Determine the indices for uncorrelated data
 #Input: data = input data
 #Output: t_uncorr = indices of the uncorrelated data
@@ -54,10 +59,10 @@ def uncorr_ind(data):
 
     #Apply ruptures to find uncorrelated samples
     model = 'l1'
-    algo = rpt.Binseg(model=model, min_size=10, jump=10).fit(raw)
+    algo = rpt.Binseg(model=model).fit(raw)
     n = len(raw)
     sigma = stdev(raw)
-    t_uncorr = algo.predict(epsilon=3 * n * sigma ** 2)
+    t_uncorr = algo.predict(pen = np.log(n) * sigma**2)
 
     return t_uncorr
 
