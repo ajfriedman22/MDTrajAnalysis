@@ -9,7 +9,7 @@ import os.path
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of Equilibration Time from RMSD')
 parser.add_argument('-n', required=True, help='File name for BB RMSD (xvg)')
-parser.add_argument('-t', required=True, type=float, help='Total time for trajectory (ns)')
+parser.add_argument('-t', required=True, type=int, help='Total time for trajectory (ns)')
 parser.add_argument('-p', required=True, type=float, help='Percent of trajectory for which RMSD should be stable')
 parser.add_argument('-l', required=True, type=float, help='Allowed fluctuations of RMSD at equilibrium(Angstrom)')
 

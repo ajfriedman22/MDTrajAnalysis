@@ -6,12 +6,23 @@ import sys
 import os.path
 from itertools import product
 
+def input_torsion(file_input, traj):
+    input_ind = open(file_input, 'r').readlines()
+    torsion_ind = np.zeros((len(input_ind), 4))
+    torsion_name = []
+    for i in range(len(input_names)):
+        line = input_ind[i].split()
+        torsion_name.append(line[0])
+        for j in range(4):
+            torsion_ind[i,j] = traj.topology.select('resid ' + str(int(line[1])-offset) + ' and name ' + str(line[j+2]))
+    return torsion_name, torsion_ind
+
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of Ligand Conformers')
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
-parser.add_argument('-l', required=False, type=str, default = 0, help= 'Ligand residue name')
-parser.add_argument('-ind', required=True, help= 'File containing atom indices for ligand torsions(txt)')
+parser.add_argument('-s', required=True, type = str, help= 'name res# name_atom1 name_atom2 name_atom3 name_atom4')
+parser.add_argument('-n', required=True, type = str, help= 'Name for dihedral file')
 
 #Import Arguments
 args = parser.parse_args()
@@ -21,10 +32,7 @@ if File_traj.split('.')[-1] != 'xtc': #Add file extension if not in input
 File_gro = args.g
 if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
-lig = args.l
-file_ind = args.ind
-if file_ind.split('.')[-1] != 'txt': #Add default file extension if not in input
-    file_ind = file_ind + '.txt'
+file_input = args.s
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -47,23 +55,7 @@ del traj
 offset = 1
 
 #Load atom indices for torisonal angles from file
-input_ind = open(file_ind, 'r').readlines()
-torsion_ind = np.zeros((len(input_ind), 4))
-torsion_name = []
-for i in range(len(input_ind)):
-    line = input_ind[i].split()
-    torsion_name.append(line[0])
-    torsion_ind[i,:] = [int(line[1])-offset, int(line[2])-offset, int(line[3])-offset, int(line[4])-offset]
-
-#Check that atom indices are for ligand
-lig_atom = traj_uncorr.topology.select('resname ' + lig)
-min_lig = min(lig_atom)
-max_lig = max(lig_atom)
-if ((min_lig <= torsion_ind) & (max_lig >= torsion_ind)).all():
-    print('All atoms in ligand')
-else:
-    print('Atoms outside range for ligand! Exiting immediately!')
-    exit()
+torsion_name, torsion_ind = input_torsion(file_input, traj_uncorr)
 
 #Compute dihedral angles for ligand
 dihedral = md.compute_dihedrals(traj_uncorr, indices=torsion_ind)
@@ -106,17 +98,12 @@ conf_per = conf_per*(100/frames)
 
 #Check that sum of frames ligand is in each conformations total to the number of frames
 if sum(conf_per) < 99.5:
-    print('Error! Not all frames accounted for!')
+    raise Warning('Error! Not all frames accounted for!')
 elif sum(conf_per) > 100:
-    print('Error! Total percent greater than 100%')
+    raise Exception('Error! Total percent greater than 100%')
 
 #Print conformer angle combinations, percent ligand is in conformation, and frame in which the ligand is in that conformation
-output_per = open('ligand_conf_per.txt', 'w')
-for i in range(len(conf_per)):
-    if conf_per[i] > 0:
-        output_per.write('Conformation ' + str(i+1) + ': ' + str(conf_per[i]) + '%\n')
-        output_per.write('frame ' + str(conf_frame[i]) + '\n')
-    
-output_conf = open('ligand_conf_id.txt', 'w')
-for i in range(len(dihe_ind)):
-    output_conf.write('Diherdal ' + str(dihe_ind[i]) + ': ' + str(dihe_max[i][0]) + ' or ' + str(dihe_max[i][1]) + '\n')
+df = pd.DataFrame({'Dihedral Name': dihe_name, 'Occupancy(%)': conf_per, 'Frame': conf_frame})
+df2 = pd.DataFrame({'Dihedral': dihe_ind, 'Max 1': dihe_max[:][0], 'Max 2': dihe_max[:][1]})
+df.to_csv('conf_' + name + '_per.csv')
+df2.to_csv('conf_' + name + '_id.csv')

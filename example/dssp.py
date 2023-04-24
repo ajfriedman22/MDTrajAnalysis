@@ -5,6 +5,7 @@ import numpy as np
 import argparse
 import sys
 import os.path
+import pandas as pd
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of DSSP for MD Trajectory')
@@ -45,33 +46,37 @@ offset = 1 + miss_res
 
 #Seperate section for DSSP calculation
 input_file = open(sect, 'r').readlines()
-[name, first, last] = input_file[0].split()
-traj_sect = traj_uncorr.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
 
-#Compute Phi and Psi angles for all residues in the a7 helix in all frames
-phi_ind, phi_angle = md.compute_phi(traj_sect, periodic = True, opt = True)
-psi_ind, psi_angle = md.compute_psi(traj_sect, periodic = True, opt = True)
-time, angles = np.shape(phi_angle) #determine the number of frames and the number of angles computed
+for i in range(len(input_file)):
+    [name, first, last] = input_file[i].split()
+    first, last = int(first), int(last)
+    traj_sect = traj_uncorr.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
+
+    #Compute Phi and Psi angles for all residues in the a7 helix in all frames
+    phi_ind, phi_angle = md.compute_phi(traj_sect, periodic = True, opt = True)
+    psi_ind, psi_angle = md.compute_psi(traj_sect, periodic = True, opt = True)
+    time, angles = np.shape(phi_angle) #determine the number of frames and the number of angles computed
     
-#Compute Secondary Structure of all Residues in the a7 helix using MDTraj function
-dssp_list = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all residues in the a7 helix for all trajectory frames
-file_dssp = open('DSSP_'+ name + '.txt','w') #Create output file for DSSP and write over if file is present
+    #Compute Secondary Structure of all Residues in the a7 helix using MDTraj function
+    dssp_raw = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all residues in the a7 helix for all trajectory frames
+    frames, residues = np.shape(dssp_raw)
 
-#Replace blank spaces with 'l' for loop to avoid output confusion
-dssp_res_mod = prot_struct.dssp_remove_space(dssp_list, 'l')
+    #Get vector of residues computed
+    res_name = np.linspace(first, last, num=residues)
 
-#Output DSSP to file
-frame_uncorr = len(dssp_res_mod)
-residue = len(dssp_res_mod[0])
-for i in range(frame_uncorr): #Each row is a single frame
-    dssp_i = dssp_res_mod[i]
-    for j in range(residue):#Each column is a residue in the a7 helix
-        file_dssp.write(dssp_i[j] + ' ')
-    file_dssp.write('\n') #New line between each time frame
-file_dssp.close() #close file
-    
-#Save psi and phi angles to files and overwrite if file is present
-np.savetxt('phi_' + name + '.txt', phi_angle)
-np.savetxt('psi_' + name + '.txt', psi_angle)
+    #Output to file
+    df = pd.DataFrame()
+    for i in range(residues):
+        res_i_dssp = []
+        for j in range(frames):
+            if i == ' ': #Replace spaces with l if input selected
+                res_i_dssp.append('l')
+            else:
+                res_i_dssp.append(i)
+        df[str(res_name[i])] = res_i_dssp
+    df.to_csv('DSSP/DSSP_' + name + '.csv') 
 
+    #Save psi and phi angles to files and overwrite if file is present
+    df = pd.DataFrame({'Phi': phi_angle, 'Psi': psi_angle})
+    df.to_csv('DSSP/phi_psi_' + name + '.csv')
 print('DSSP Calculated and File Written')
