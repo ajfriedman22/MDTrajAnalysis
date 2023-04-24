@@ -40,8 +40,6 @@ top = traj_ns.topology
 prot_traj = traj_ns.atom_slice(top.select('protein'))
 num_prot_res = prot_traj.n_residues #Backbond atoms of protein only
 del traj; del prot_traj; del traj_uncorr
-print(num_prot_res)
-print(traj_ns)
 
 #Load sections of interest file
 sections = open(sect, 'r').readlines()
