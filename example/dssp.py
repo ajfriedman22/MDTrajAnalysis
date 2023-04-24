@@ -38,9 +38,8 @@ import prot_struct
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
-top = traj_uncorr.topology
-del traj
+top = traj.topology
+
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
@@ -50,7 +49,7 @@ input_file = open(sect, 'r').readlines()
 for i in range(len(input_file)):
     [name, first, last] = input_file[i].split()
     first, last = int(first), int(last)
-    traj_sect = traj_uncorr.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
+    traj_sect = traj.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
 
     #Compute Phi and Psi angles for all residues in the a7 helix in all frames
     phi_ind, phi_angle = md.compute_phi(traj_sect, periodic = True, opt = True)
@@ -77,6 +76,9 @@ for i in range(len(input_file)):
     df.to_csv('DSSP/DSSP_' + name + '.csv') 
 
     #Save psi and phi angles to files and overwrite if file is present
-    df = pd.DataFrame({'Phi': phi_angle, 'Psi': psi_angle})
+    df = pd.DataFrame()
+    for i in range(angles):
+        df['Phi Angle ' + str(i+1)] = phi_angle[:,i]
+        df['Psi Angle ' + str(i+1)] = psi_angle[:,i]
     df.to_csv('DSSP/phi_psi_' + name + '.csv')
 print('DSSP Calculated and File Written')
