@@ -61,17 +61,17 @@ for i in range(len(input_file)):
     frames, residues = np.shape(dssp_raw)
 
     #Get vector of residues computed
-    res_name = np.linspace(first, last, num=residues)
+    res_name = np.linspace(first, last, num=residues, dtype=int)
 
     #Output to file
     df = pd.DataFrame()
     for i in range(residues):
         res_i_dssp = []
         for j in range(frames):
-            if i == ' ': #Replace spaces with l if input selected
+            if dssp_raw[j][i] == ' ': #Replace spaces with l if input selected
                 res_i_dssp.append('l')
             else:
-                res_i_dssp.append(i)
+                res_i_dssp.append(dssp_raw[j][i])
         df[str(res_name[i])] = res_i_dssp
     df.to_csv('DSSP/DSSP_' + name + '.csv') 
 
