@@ -43,6 +43,7 @@ for i in range(len(input_data)):
 
 #Calculate distances
 dist = md.compute_contacts(traj, loop_res, scheme='closest-Heavy')
+print(dist)
 
 #Determine percent open
 per = np.zeros(len(loop_name))

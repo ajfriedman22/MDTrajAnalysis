@@ -67,17 +67,22 @@ for i in range(len(torsion_name)):
     if len(maxima) >= 2:
         dihe_max.append(maxima)
         dihe_ind.append(i)
+#Convert to np array
+dihe_max_np = np.zeros((len(dihe_max), 2))
+for i in range(len(dihe_max)):
+    dihe_max_np[i][:] = dihe_max[i]
 
 #Determine the number of sampled ligand conformers from the torsion angles
 num_conf = 2**len(dihe_ind)
 dihe_name = []
+for i in range(num_conf+1):
+    dihe_name.append('D' + str(i+1))
 conf_per = np.zeros(num_conf+1) #Percent of trajectory in each coformer
 conf_frame = np.zeros(num_conf+1) #First frame the conformer is observed
 frames, num_di = np.shape(dihedral)
 for t in range(0, frames): #Loop fromgh frames from trajectory
     c = 0 #Keep track of conformer number 
     for i in range(len(dihe_ind)):
-        dihe_name.append('D' + str(c+1))
         [max_main, max_second] = dihe_max[i]
         n = dihe_ind[i]
         if abs(max_main - dihedral[t,n]) < 30 or abs(max_main - dihedral[t,n] + 360) < 30 or abs(max_main - dihedral[t,n] - 360) < 30:
@@ -92,17 +97,16 @@ for t in range(0, frames): #Loop fromgh frames from trajectory
     if conf_frame[c] == 0:
         conf_frame[c] = t+1
 conf_per = conf_per*(100/frames)
-print(len(dihe_name))
-print(len(conf_per))
 #Check that sum of frames ligand is in each conformations total to the number of frames
 if sum(conf_per) < 99.5:
     raise Warning('Error! Not all frames accounted for!')
 elif sum(conf_per) > 100:
     raise Exception('Error! Total percent greater than 100%')
+print(dihe_max)
 
 #Print conformer angle combinations, percent ligand is in conformation, and frame in which the ligand is in that conformation
 df = pd.DataFrame({'Dihedral Name': dihe_name, 'Occupancy(%)': conf_per, 'Frame': conf_frame})
-df2 = pd.DataFrame({'Dihedral': dihe_ind, 'Max 1': dihe_max[:][0], 'Max 2': dihe_max[:][1]})
+df2 = pd.DataFrame({'Dihedral': dihe_ind, 'Max 1': dihe_max_np[:][0], 'Max 2': dihe_max_np[:][1]})
 df.to_csv('conf_' + name + '_per.csv')
 df2.to_csv('conf_' + name + '_id.csv')
 
