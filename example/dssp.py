@@ -6,6 +6,10 @@ import argparse
 import sys
 import os.path
 import pandas as pd
+import warnings
+
+#Silence MDTraj Warnings
+warnings.filterwarnings("ignore")
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of DSSP for MD Trajectory')
@@ -46,39 +50,49 @@ offset = 1 + miss_res
 #Seperate section for DSSP calculation
 input_file = open(sect, 'r').readlines()
 
+#Check if output should go to seperate directory
+if os.path.exists('./DSSP/'):
+    dir_name = 'DSSP/'
+else:
+    dir_name = ''
+
 for i in range(len(input_file)):
-    [name, first, last] = input_file[i].split()
+    [name, first, first_name, last] = input_file[i].split()
     first, last = int(first), int(last)
     traj_sect = traj.atom_slice(top.select(str(int(first)-offset) + ' <= resid and resid <= ' + str(int(last)-offset)))
-
-    #Compute Phi and Psi angles for all residues in the a7 helix in all frames
-    phi_ind, phi_angle = md.compute_phi(traj_sect, periodic = True, opt = True)
-    psi_ind, psi_angle = md.compute_psi(traj_sect, periodic = True, opt = True)
-    time, angles = np.shape(phi_angle) #determine the number of frames and the number of angles computed
     
-    #Compute Secondary Structure of all Residues in the a7 helix using MDTraj function
-    dssp_raw = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all residues in the a7 helix for all trajectory frames
-    frames, residues = np.shape(dssp_raw)
+    #Check that first residue and name match
+    if len(top.select('resid ' + str(first-offset) + ' and resname ' + str(first_name))) == 0:
+        print(name + ' resid and name do not match')
+    else:
+        #Compute Phi and Psi angles for all residues in the a7 helix in all frames
+        phi_ind, phi_angle = md.compute_phi(traj_sect, periodic = True, opt = True)
+        psi_ind, psi_angle = md.compute_psi(traj_sect, periodic = True, opt = True)
+        time, angles = np.shape(phi_angle) #determine the number of frames and the number of angles computed
+    
+        #Compute Secondary Structure of all Residues in the a7 helix using MDTraj function
+        dssp_raw = md.compute_dssp(traj_sect, simplified=False) #Compute DSSP for all residues in the a7 helix for all trajectory frames
+        frames, residues = np.shape(dssp_raw)
 
-    #Get vector of residues computed
-    res_name = np.linspace(first, last, num=residues, dtype=int)
+        #Get vector of residues computed
+        res_name = np.linspace(first, last, num=residues, dtype=int)
 
-    #Output to file
-    df = pd.DataFrame()
-    for i in range(residues):
-        res_i_dssp = []
-        for j in range(frames):
-            if dssp_raw[j][i] == ' ': #Replace spaces with l if input selected
-                res_i_dssp.append('l')
-            else:
-                res_i_dssp.append(dssp_raw[j][i])
-        df[str(res_name[i])] = res_i_dssp
-    df.to_csv('DSSP/DSSP_' + name + '.csv') 
+        #Output to file
+        df = pd.DataFrame()
+        for i in range(residues):
+            res_i_dssp = []
+            for j in range(frames):
+                if dssp_raw[j][i] == ' ': #Replace spaces with l if input selected
+                    res_i_dssp.append('l')
+                else:
+                    res_i_dssp.append(dssp_raw[j][i])
+            df[str(res_name[i])] = res_i_dssp
+        df.to_csv(dir_name + 'DSSP_' + name + '.csv') 
 
-    #Save psi and phi angles to files and overwrite if file is present
-    df = pd.DataFrame()
-    for i in range(angles):
-        df['Phi Angle ' + str(i+1)] = phi_angle[:,i]
-        df['Psi Angle ' + str(i+1)] = psi_angle[:,i]
-    df.to_csv('DSSP/phi_psi_' + name + '.csv')
+        #Save psi and phi angles to files and overwrite if file is present
+        df = pd.DataFrame()
+        for i in range(angles):
+            df['Phi Angle ' + str(i+1)] = phi_angle[:,i]
+            df['Psi Angle ' + str(i+1)] = psi_angle[:,i]
+        df.to_csv(dir_name + 'phi_psi_' + name + '.csv')
 print('DSSP Calculated and File Written')

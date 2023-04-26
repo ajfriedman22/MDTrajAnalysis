@@ -51,6 +51,10 @@ def uncorr_ind(data):
     import ruptures as rpt 
     import numpy as np
     from statistics import stdev
+    
+    #Raise Error if data trajectory is of length 0
+    if len(data) == 0:
+        raise Exception('Error! Empty Array Supplied!')
 
     #Convert data to float
     raw = np.zeros(len(data))
@@ -59,11 +63,16 @@ def uncorr_ind(data):
 
     #Apply ruptures to find uncorrelated samples
     model = 'l1'
-    algo = rpt.Binseg(model=model).fit(raw)
+    algo = rpt.Binseg(model=model, min_size=10, jump=10).fit(raw)
     n = len(raw)
     sigma = stdev(raw)
-    t_uncorr = algo.predict(pen = np.log(n) * sigma**2)
+    #t_uncorr = algo.predict(pen = np.log(n) * sigma**2)
+    t_uncorr = algo.predict(epsilon=3 * n * sigma ** 2)
 
+    #Raise Warning if Ruptures Supplied fewer than 100 uncorrelated samples
+    if len(t_uncorr) < 100:
+        raise Warning('Low Number of Uncorrelated Samples Found! Review supplied array!')
+    
     return t_uncorr
 
 #Sort data to remove correlated samples
@@ -72,15 +81,25 @@ def uncorr_ind(data):
 def uncorr_sort(data, t_uncorr):
     #import packages
     import numpy as np
-
-    #Convert data to float
-    raw = np.zeros(len(data))
-    for i in range(len(data)):
-        raw[i] = float(data[i])
+    
+    #Check length of input array against uncorrelated frames list
+    if len(data) < t_uncorr[-1]:
+        raise Warning('Warning: Supplied array is shorter than expected. Uncorrelated samples not removed!')
+        return data
+    
+    #Check data type and convert if needed or error if not accepted
+    if isinstance(data, np.ndarray):
+        raw = data
+    elif isinstance(data, list):
+        #Convert data to float
+        raw = np.zeros(len(data))
+        for i in range(len(data)):
+            raw[i] = float(data[i])
+    else:
+        raise Exception('Supplied array is not an accepted type (list or np.array)')
 
     #Reduce to uncorrelated data
-    num=len(t_uncorr)
-    data_uncorr = np.zeros(num)
+    data_uncorr = np.zeros(len(t_uncorr))
     n = 0
     for i in range(len(raw)):
         if i in t_uncorr:
@@ -107,12 +126,23 @@ def uncorr_char(data, t_uncorr):
 #Output:
 #rmsd_uncorr = RMSD for each frame at each uncorrelated frame in the trajectory
 #t = uncorreated time frames in trajectory
-def compute_rmsd(traj, ref):
+def compute_rmsd(traj, ref, t_uncorr = 'none'):
     import mdtraj as md
     import sys
-
+    #Check that trajectory and reference are of same length
+    if traj.n_atoms != ref.n_atoms:
+        raise Warning('Reference and trajectory are of different lengths!')
+    
     rmsd = md.rmsd(traj, ref, parallel=True, precentered=False)
-    t = uncorr_ind(rmsd)
+
+    if t_uncorr == 'none':
+        t = uncorr_ind(rmsd)
+    else: 
+        t = t_uncorr
     rmsd_uncorr = uncorr_sort(rmsd, t)
-    return rmsd_uncorr, t
+
+    if t_uncorr == 'none':
+        return rmsd_uncorr, t
+    else:
+        return rmsd_uncorr
 

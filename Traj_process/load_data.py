@@ -8,7 +8,7 @@
 #traj_ns = MDTraj trajectory with solvent molecules removed
 #traj_a7 = MDTraj trajectory with only the atoms in the a7 helix
 #miss_first = Returns True if the first residue of PTP1B is missing and all indices need to be subtracted by 1
-def mdtraj_load(File_traj, File_gro, rm_solvent=True):
+def mdtraj_load(File_traj, File_gro, rm_solvent=True, rm_uncorr=True):
     #Import required packages
     import mdtraj as md
     if File_traj.split('.')[-1] != 'xtc': #Add file extension if not in input
@@ -21,13 +21,13 @@ def mdtraj_load(File_traj, File_gro, rm_solvent=True):
     
     print('Trajectory Loaded')
     if rm_solvent == True:
-        traj_ns = traj.remove_solvent()
-    
-        #Remove uncorrelated Frames 
-        traj_uncorr = remove_uncorr('uncorrelated_frames.txt', traj_ns)
-    else:
+        traj = traj.remove_solvent()
+    if rm_uncorr == True:
         #Remove uncorrelated Frames 
         traj_uncorr = remove_uncorr('uncorrelated_frames.txt', traj)
+    else:
+        #Remove uncorrelated Frames 
+        traj_uncorr = traj
     return traj_uncorr
 
 
