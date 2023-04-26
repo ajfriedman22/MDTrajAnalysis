@@ -4,6 +4,10 @@ import pandas as pd
 import argparse
 import sys
 import os.path
+import warnings
+
+#Silence MDTraj Warnings
+warnings.filterwarnings("ignore")
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
@@ -42,8 +46,7 @@ for i in range(len(input_data)):
     loop_res[i,:] = [float(line[1]), float(line[2])]
 
 #Calculate distances
-dist = md.compute_contacts(traj, loop_res, scheme='closest-Heavy')
-print(dist)
+dist, pairs = md.compute_contacts(traj, loop_res, scheme='closest-Heavy')
 
 #Determine percent open
 per = np.zeros(len(loop_name))
@@ -55,6 +58,7 @@ for n in range(len(loop_name)):
         if dist[t][n] < loop_threshold[n]:
             count += 1
             loop_orient.append(1)
+        else:
             loop_orient.append(0)
     per[n] = 100*(count/traj.n_frames)
     df[str(loop_name[n])] = loop_orient
