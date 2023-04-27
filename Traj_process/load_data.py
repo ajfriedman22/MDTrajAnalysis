@@ -68,11 +68,20 @@ def load_ref(ref, selection):
     
     return ref_sect
 
-def read_sections(sections, i, miss_res, num_prot_res, num_sect):
+def read_sections(sections, i, miss_res, top='none', num_prot_res=0, num_sect=2):
     import numpy as np
-
+    
+    offset = 1 + miss_res
     line = sections[i].split()
-    if len(line) == 6:
+    if len(line) == 8:
+        [name1, sect1_start, sect1_check, sect1_end, name2, sect2_start, sect2_check, sect2_end] = line
+        #Check that first residue and name match
+        if len(top.select('resid ' + str(int(sect1_start)-offset) + ' and resname ' + str(sect1_check))) == 0:
+            raise Exception(name1 + ' resid and name do not match')
+        if len(top.select('resid ' + str(int(sect2_start)-offset) + ' and resname ' + str(sect2_check))) == 0:
+            raise Exception(name2 + ' resid and name do not match')
+
+    elif len(line) == 6:
         [name1, sect1_start, sect1_end, name2, sect2_start, sect2_end] = line
     elif len(line) == 3:
         [name1, sect1_start, sect1_end] = line
@@ -84,10 +93,10 @@ def read_sections(sections, i, miss_res, num_prot_res, num_sect):
         exit()
 
     #Compute distance between all residues in sect1 and sect2
-    sect1_start = int(sect1_start)-1-miss_res
-    sect1_end = int(sect1_end)-1-miss_res
-    sect2_start = int(sect2_start)-1-miss_res
-    sect2_end = int(sect2_end)-1-miss_res
+    sect1_start = int(sect1_start)-offset
+    sect1_end = int(sect1_end)-offset
+    sect2_start = int(sect2_start)-offset
+    sect2_end = int(sect2_end)-offset
 
     sect1 = np.linspace(sect1_start, sect1_end, num=sect1_end-sect1_start+1)
     sect2 = np.linspace(sect2_start, sect2_end, num=sect2_end-sect2_start+1)
