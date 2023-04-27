@@ -1,5 +1,4 @@
 #!/ usr / bin / env python
-import math
 import mdtraj as md
 import numpy as np
 import argparse
@@ -9,7 +8,7 @@ import warnings
 import pandas as pd
 
 #Silence MDTraj Warnings
-warnings.filterwarnings("ignore")
+#warnings.filterwarnings("ignore")
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
@@ -30,11 +29,7 @@ parser.add_argument('-ln', required=False, default = 'self', help='Reference nam
 #Import Arguments
 args = parser.parse_args()
 File_traj = args.t
-if File_traj.split('.')[-1] != 'xtc': #Add file extension if not in input
-    File_traj = File_traj + '.xtc'
 File_gro = args.g
-if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
-    File_gro = File_gro + '.gro'
 eq_time = args.e
 miss_res = args.m
 ref = args.ref
@@ -104,15 +99,14 @@ if ref != 'none' and ref_name == 'self':
         #Calculate RMSD for full protein relative to reference structure
         rmsd_full_uncorr2 = process_traj.compute_rmsd(traj2_bb, ref2_bb, t_full)
     
-    #Only save RMSD and RMSF values to file for equilibrated input trajectories
-    if eq_time != 0:
-        df = pd.DataFrame({'RMSD': rmsd_full_uncorr}) 
-        df2 = pd.DataFrame({'RMSF': rmsf_data}) 
-        if aa_atom != 0 and ref2 != 'none':
-            df['Prot2 RMSD'] = rmsd_full_uncorr2
-            df2['Prot2 RMSF'] = np.pad(rmsf_data2, (0,len(rmsf_data) - len(rmsf_data2)), 'constant')
-        df.to_csv(dir_name + 'rmsd_ref_' + str(ref_name) + name_add + '.csv')
-        df2.to_csv('rmsf_ref_' + str(ref_name) + name_add + '.csv')
+    #Save RMSD and RMSF values to CSV
+    df = pd.DataFrame({'RMSD': rmsd_full_uncorr}) 
+    df2 = pd.DataFrame({'RMSF': rmsf_data}) 
+    if aa_atom != 0 and ref2 != 'none':
+        df['Prot2 RMSD'] = rmsd_full_uncorr2
+        df2['Prot2 RMSF'] = np.pad(rmsf_data2, (0,len(rmsf_data) - len(rmsf_data2)), 'constant')
+    df.to_csv(dir_name + 'rmsd_ref_' + str(ref_name) + name_add + '.csv')
+    df2.to_csv('rmsf_ref_' + str(ref_name) + name_add + '.csv')
     
     np.savetxt('uncorrelated_frames' + name_add + '.txt', t_full) #Save indices for uncorrelated frames to file
 

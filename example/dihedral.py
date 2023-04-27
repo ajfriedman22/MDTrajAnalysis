@@ -44,7 +44,7 @@ sys.path.insert(1, prefix + '/display_data/')
 import plot
 
 #Load Trajectory
-traj = load_data.mdtraj_load(File_traj, File_gro)
+traj = load_data.mdtraj_load(File_traj, File_gro, True, True)
 
 #Set protein offset based on missing residues
 offset = 1
@@ -72,7 +72,7 @@ dihe_max_np = np.zeros((len(dihe_max), 2))
 for i in range(len(dihe_max)):
     dihe_max_np[i][:] = dihe_max[i]
 
-#Determine the number of sampled ligand conformers from the torsion angles
+#Determine the number of sampled conformers from the torsion angles
 num_conf = 2**len(dihe_ind)
 dihe_name = []
 for i in range(num_conf+1):

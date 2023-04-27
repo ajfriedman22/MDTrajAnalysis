@@ -2,7 +2,6 @@
 #Import packages
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 import sys
 import os.path
 

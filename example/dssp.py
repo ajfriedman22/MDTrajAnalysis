@@ -1,5 +1,4 @@
 #!/ usr / bin / env python
-import math
 import mdtraj as md
 import numpy as np
 import argparse

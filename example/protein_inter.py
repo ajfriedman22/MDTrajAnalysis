@@ -1,4 +1,5 @@
 #!/ usr / bin / env python
+from __future__ import print_function
 import mdtraj as md
 import numpy as np
 import argparse
@@ -7,6 +8,45 @@ import os.path
 from itertools import product
 import warnings
 import pandas as pd
+import re
+
+
+class ProgressBar(object):
+    DEFAULT = 'Progress: %(bar)s %(percent)3d%%'
+    FULL = '%(bar)s %(current)d/%(total)d (%(percent)3d%%) %(remaining)d to go'
+
+    def __init__(self, total, width=40, fmt=DEFAULT, symbol='=',
+                 output=sys.stderr):
+        assert len(symbol) == 1
+
+        self.total = total
+        self.width = width
+        self.symbol = symbol
+        self.output = output
+        self.fmt = re.sub(r'(?P<name>%\(.+?\))d',
+            r'\g<name>%dd' % len(str(total)), fmt)
+
+        self.current = 0
+
+    def __call__(self):
+        percent = self.current / float(self.total)
+        size = int(self.width * percent)
+        remaining = self.total - self.current
+        bar = '[' + self.symbol * size + ' ' * (self.width - size) + ']'
+
+        args = {
+            'total': self.total,
+            'bar': bar,
+            'current': self.current,
+            'percent': percent * 100,
+            'remaining': remaining
+        }
+        print('\r' + self.fmt % args, file=self.output, end='')
+
+    def done(self):
+        self.current = self.total
+        self()
+        print('', file=self.output)
 
 #Silence MDTraj Warnings
 warnings.filterwarnings("ignore")
@@ -36,7 +76,6 @@ import load_data
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro, True, True)
 top = traj.topology
-print(traj)
 
 #Load sections of interest file
 sections = open(sect, 'r').readlines()
@@ -47,13 +86,16 @@ if os.path.exists('./prot_inter/'):
 else:
     dir_name = ''
 
+progress = ProgressBar(len(sections), fmt=ProgressBar.FULL)
+
 #Loop through sections of interest
-for i in range(len(sections)):
+for i in range(progress.total):
+    #Input sections from file
     name1, name2, sect1, sect2 = load_data.read_sections(sections, i, miss_res, top)
     res_pairs = list(product(sect1, sect2))
-
+    
+    #Compute smallest distance from heavy atoms
     [dist, pairs] = md.compute_contacts(traj, contacts=res_pairs, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
-#    [dist, pairs] = md.compute_contacts(traj, contacts=res_pairs)
 
     #Determine the % of the trajectory residues are in contact
     df_per = pd.DataFrame(np.nan, index = sect2, columns = sect2) 
@@ -93,6 +135,8 @@ for i in range(len(sections)):
     #Output total contacts for section
     df_tot = pd.DataFrame({'Total Interactions': tot_inter})
     df_tot.to_csv(dir_name + name1 + '_' + name2 + '_tot_inter.csv') 
-    print('Interactions b/w ' + name1 + ' and ' + name2 + ' Completed')
-    exit()
+#    print('Interactions b/w ' + name1 + ' and ' + name2 + ' Completed')
+    progress.current += 1
+    progress()
+progress.done()
 print('Protein Interaction Analysis Complete')
