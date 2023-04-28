@@ -1,13 +1,10 @@
 #!/ usr / bin / env python
-import mdtraj as md
 import numpy as np
 import argparse
-import sys
-import os.path
-
+import pandas as pd
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determine the h-bonds which are different b/w two or more conditions')
-parser.add_argument('-f', required=True, help='Text file with file paths of Hbonds_name.txt files (conditions on different lines)')
+parser.add_argument('-f', required=True, help='Input file (condition_name dir1 dir2 ...)')
 
 #Import Arguments
 args = parser.parse_args()
@@ -24,10 +21,11 @@ for line in file_path:
     hbond_line = []
     for n in range(1, len(line_sep)):
         path = line_sep[n].strip()
-        input_hbonds = open(path + '/Hbonds_name.txt', 'r').readlines()
-        for i in input_hbonds:
-            if i not in hbond_line:
-                hbond_line.append(i)
+        input_df = pd.read_csv(path + '/Hbonds_per.csv')
+        for index, row in input_df.iterrows():
+            bond = row['Donor Residue Name'] + row['Donor Residue Num'] + row['Donor Atom Num'] + '-' + row['Acceptor Reisude Name'] + row['Acceptor Residue Num'] + row['Acceptor Atom Num']]
+            if bond not in hbond_line:
+                hbond_line.append(bond)
     hbonds_all.append(hbond_line)
     hbonds_condition_name.append(line_sep[0])
 print('Files Loaded')
@@ -40,7 +38,7 @@ for i in range(len(hbonds_condition_name)):
     for j in range(len(hbonds_condition_name)):
         if j != i:
             for n in hbonds_all[j]:
-                if n not in hbonds_not_condition:
+                if n not in hbonds_not_condition and n not in hbonds_condition:
                     hbonds_not_condition.append(n)
     
     #Determine h-bonds only in the set condition
