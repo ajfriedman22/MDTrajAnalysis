@@ -67,11 +67,7 @@ sys.path.insert(1, prefix + '/protein_analysis/')
 import hbond_analysis
 
 #Load Trajectory
-traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
-traj_prot = traj_uncorr.atom_slice(traj_uncorr.topology.select('protein')) #Select only atoms in the protein
-top = traj_prot.topology
-del traj; del traj_uncorr
+traj = load_data.mdtraj_load(File_traj, File_gro, True, True)
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
@@ -80,8 +76,7 @@ offset = 1 + miss_res
 name_bonds, options_bond = [],[]
 input_paths = open(File_path, 'r').readlines()
 for i in input_paths:
-    file_path = i.strip()
-    input_bonds = open(file_path, 'r').readlines()
+    input_bonds = open(i.strip(), 'r').readlines()
     for n in input_bonds:
         n_clean = n.strip()
         line = n_clean.split(' ')
