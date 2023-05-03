@@ -76,13 +76,26 @@ offset = 1 + miss_res
 name_bonds, options_bond = [],[]
 input_paths = open(File_path, 'r').readlines()
 for i in input_paths:
-    input_bonds = open(i.strip(), 'r').readlines()
-    for n in input_bonds:
+    input_df = pd.read_csv(i.strip())
+    for index, row in input_df.iterrows():
+        bond = row['Donor Residue Name'] + str(row['Donor Residue ID']) + '-' + row['Acceptor Residue Name'] + str(row['Acceptor Residue ID'])
+   
         n_clean = n.strip()
         line = n_clean.split(' ')
-        if line[0] not in name_bonds:
+        if bond not in name_bonds:
             name_bonds.append(line[0])
             options_bond.append(line[1:])
+
+hbonds_all, hbonds_all_full = [],[]
+        for index, row in input_df.iterrows():
+            bond_full = row['Donor Residue Name'] + str(row['Donor Residue ID']) + '-' + row['Donor Atom Name'] + ' -- ' + row['Acceptor Residue Name'] + str(row['Acceptor Residue ID']) + '-' + row['Acceptor Atom Name']
+            bond = row['Donor Residue Name'] + str(row['Donor Residue ID']) + '-' + row['Acceptor Residue Name'] + str(row['Acceptor Residue ID'])
+            if bond not in hbond_line:
+                hbond_line.append(bond)
+                hbond_line_full.append(bond_full)
+    hbonds_all.append(hbond_line)
+    hbonds_all_full.append(hbond_line_full)
+    hbonds_condition_name.append(line_sep[0])
 
 #Output file for bond 
 output = open('Hbond_per_res.txt', 'w') #percentage of time each bond occurs
