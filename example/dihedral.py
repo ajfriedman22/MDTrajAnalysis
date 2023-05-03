@@ -99,15 +99,16 @@ for t in range(0, frames): #Loop fromgh frames from trajectory
 conf_per = conf_per*(100/frames)
 #Check that sum of frames ligand is in each conformations total to the number of frames
 if sum(conf_per) < 99.5:
-    raise Warning('Error! Not all frames accounted for!')
+    print('Error! Not all frames accounted for!')
 elif sum(conf_per) > 100:
-    raise Exception('Error! Total percent greater than 100%')
-print(dihe_max)
+    print('Error! Total percent greater than 100%')
+print(dihe_max_np)
 
 #Print conformer angle combinations, percent ligand is in conformation, and frame in which the ligand is in that conformation
 df = pd.DataFrame({'Dihedral Name': dihe_name, 'Occupancy(%)': conf_per, 'Frame': conf_frame})
-df2 = pd.DataFrame({'Dihedral': dihe_ind, 'Max 1': dihe_max_np[:][0], 'Max 2': dihe_max_np[:][1]})
-df.to_csv('conf_' + name + '_per.csv')
-df2.to_csv('conf_' + name + '_id.csv')
+df2 = pd.DataFrame({'Dihedral': dihe_ind, 'Max 1': dihe_max_np[:,0], 'Max 2': dihe_max_np[:,1]})
+df.to_csv('conf_per.csv')
+df2.to_csv('conf_id.csv')
 
 print('Dihedral Analysis Complete')
+print('---------------------------------------------------------------')

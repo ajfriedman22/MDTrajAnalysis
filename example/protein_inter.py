@@ -98,7 +98,7 @@ for i in range(progress.total):
     [dist, pairs] = md.compute_contacts(traj, contacts=res_pairs, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
 
     #Determine the % of the trajectory residues are in contact
-    df_per = pd.DataFrame(np.nan, index = sect2, columns = sect2) 
+    df_per = pd.DataFrame(np.nan, index = sect2, columns = sect1) 
     
     #Determine total interactions b/w sections per frame
     tot_inter = np.zeros(len(dist[:,0]))
@@ -106,10 +106,10 @@ for i in range(progress.total):
     #Compute % contact
     ref_res = sect1[0]
     per_res, hc_res1, hc_res2, hc_per = [], [], [],[]
-    for i in range(len(res_pairs)):
+    for i in range(len(res_pairs)): #Loop through residue pairs
         dist_i = dist[:,i]
         contact = 0 #conter for protein--ligand contact
-        for j in range(len(dist_i)):
+        for j in range(len(dist_i)): #Loop through time
             if dist_i[j] < 0.5:
                 contact += 1
                 tot_inter[j] += 1
@@ -135,8 +135,8 @@ for i in range(progress.total):
     #Output total contacts for section
     df_tot = pd.DataFrame({'Total Interactions': tot_inter})
     df_tot.to_csv(dir_name + name1 + '_' + name2 + '_tot_inter.csv') 
-#    print('Interactions b/w ' + name1 + ' and ' + name2 + ' Completed')
     progress.current += 1
     progress()
 progress.done()
 print('Protein Interaction Analysis Complete')
+print('-------------------------------------------------------------')

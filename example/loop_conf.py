@@ -69,3 +69,4 @@ df = pd.DataFrame({'Loop Name': loop_name, 'Percent Open': per})
 df.to_csv('loop_orientation.csv')
 
 print('Loop Oriantation Analysis Complete')
+print('---------------------------------------------------------------')
