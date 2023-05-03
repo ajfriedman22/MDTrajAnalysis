@@ -61,6 +61,7 @@ top = traj.topology
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
+offset_ref = 1 + miss_ref
 
 #Add label to files if the trajectory is not equilibrated
 if eq_time != 0:
@@ -73,17 +74,19 @@ if os.path.exists('./rmsd/'):
     dir_name = 'rmsd/'
 else:
     dir_name = ''
+   
+#Load reference
+if aa_atom != 0:
+    ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom))
+    traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of protein 1 only
+    ref2_bb = load_data.load_ref(ref2, 'backbone and index > ' + str(aa_atom))
+    traj2_bb = traj.atom_slice(top.select('backbone and index > ' + str(aa_atom))) #Backbond atoms of protein 1 only
+else:
+    ref_bb = load_data.load_ref(ref, 'backbone')
+    traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein only
 
 #Compute full BB RMSD
 if ref != 'none' and ref_name == 'self':
-    #Load reference
-    if aa_atom != 0:
-        ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom))
-        traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of protein 1 only
-    else:
-        ref_bb = load_data.load_ref(ref, 'backbone')
-        traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein only
-    
     #Calculate RMSF from reference structure
     rmsf_data = md.rmsf(traj_bb, ref_bb, parallel=True, precentered=False)
 
@@ -91,8 +94,6 @@ if ref != 'none' and ref_name == 'self':
     rmsd_full_uncorr, t_full = process_traj.compute_rmsd(traj_bb, ref_bb)
     
     if aa_atom  != 0:
-        ref2_bb = load_data.load_ref(ref2, 'backbone and index > ' + str(aa_atom))
-        traj2_bb = traj.atom_slice(top.select('backbone and index > ' + str(aa_atom))) #Backbond atoms of protein 1 only
         #Calculate RMSF from reference structure
         rmsf_data2 = md.rmsf(traj2_bb, ref2_bb, parallel=True, precentered=False)
 
@@ -113,7 +114,7 @@ if ref != 'none' and ref_name == 'self':
     print('Full BB RMSD Computed')
 
     #Delete unneeded arrays to save memory
-    del rmsf_data; del rmsd_full_uncorr; del ref_bb
+    del rmsf_data; del rmsd_full_uncorr
 else:
     print('Full BB RMSD Skipped')
 
@@ -135,13 +136,18 @@ if ref != 'none' and rmsd_sect != 'none':
         else:
             raise Exception('Error in input file! Can only accept 3 or 5 elements per line.')
             exit()
-
+            
         #Seperate sections
         ref_res = [int(ref_res_initial) - offset_ref, int(ref_res_final) - offset_ref]
         traj_res = [int(traj_res_initial) - offset, int(traj_res_final) - offset]
 
-        ref_sect = ref_bb.atom_slice(ref_top.select(str(ref_res[0]) + ' <= resid and resid <= ' + str(ref_res[1]))) #Limit trajectory to the section of choice
-        traj_sect = traj_bb.atom_slice(top_bb.select(str(traj_res[0]) + ' <= resid and resid <= ' + str(traj_res[1]))) #Limit trajectory to the section of choice
+        #Determine if section in protein 1 or 2
+        if traj_res[0] < traj_bb.n_residues:
+             ref_sect = ref_bb.atom_slice(ref_bb.topology.select(str(ref_res[0]) + ' <= resid and resid <= ' + str(ref_res[1]))) #Limit trajectory to the section of choice
+             traj_sect = traj_bb.atom_slice(traj_bb.topology.select(str(traj_res[0]) + ' <= resid and resid <= ' + str(traj_res[1]))) #Limit trajectory to the section of choice
+        else:
+             ref_sect = ref2_bb.atom_slice(ref2_bb.topology.select(str(ref_res[0]-traj_bb.n_residues) + ' <= resid and resid <= ' + str(ref_res[1]-traj_bb.n_residues))) #Limit trajectory to the section of choice
+             traj_sect = traj2_bb.atom_slice(traj2_bb.topology.select(str(traj_res[0]-traj_bb.n_residues) + ' <= resid and resid <= ' + str(traj_res[1]-traj_bb.n_residues))) #Limit trajectory to the section of choice
 
         #Compute RMSD for section of interest
         rmsd_sect_uncorr = process_traj.compute_rmsd(traj_sect, ref_sect, t_full)
@@ -203,4 +209,4 @@ if lig != 'none':
 
 else:
     print('Ligand Heavy Atom RMSD Skipped')
-
+print('-------------------------------------------------------------')
