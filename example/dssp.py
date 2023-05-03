@@ -95,3 +95,4 @@ for i in range(len(input_file)):
             df['Psi Angle ' + str(i+1)] = psi_angle[:,i]
         df.to_csv(dir_name + 'phi_psi_' + name + '.csv')
 print('DSSP Calculated and File Written')
+print('-------------------------------------------------------------')
