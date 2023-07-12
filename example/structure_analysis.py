@@ -200,8 +200,8 @@ if lig != 'none':
     traj_sect = traj_uncorr.atom_slice(traj_uncorr.topology.select('resname ' + lig)) #Limit trajectory to the section of choice
 
     #Compute RMSD for section of interest
-    rmsd_sect_uncorr = process_traj.compute_rmsd(traj_sect, ref_sect, t_full)
-    
+    rmsd_sect_uncorr = md.rmsd(traj_sect, ref_sect, parallel=True, precentered=False)
+
     #Save RMSD to file
     np.savetxt('rmsd_lig_heavy_ref_' + lig_name + '.txt', rmsd_sect_uncorr)
 
