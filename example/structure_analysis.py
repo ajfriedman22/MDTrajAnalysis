@@ -11,7 +11,7 @@ import pandas as pd
 #warnings.filterwarnings("ignore")
 
 #Declare arguments
-parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
+parser = argparse.ArgumentParser(description = 'Determination of RMSD for BB Atoms in proteins and/or ligands')
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-e', required=False, default=0, type=int, help= 'If input trajectory is equilibrated input equilibration time otherwise input 0(ns)')
@@ -70,20 +70,19 @@ else:
     name_add = '_unequil'
 
 #Check if output should go to seperate directory
-if os.path.exists('./rmsd/'):
-    dir_name = 'rmsd/'
-else:
-    dir_name = ''
+if not os.path.exists('./rmsd/'):
+    os.mkdir('rmsd')
    
 #Load reference
-if aa_atom != 0:
-    ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom))
-    traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of protein 1 only
-    ref2_bb = load_data.load_ref(ref2, 'backbone and index > ' + str(aa_atom))
-    traj2_bb = traj.atom_slice(top.select('backbone and index > ' + str(aa_atom))) #Backbond atoms of protein 1 only
-else:
-    ref_bb = load_data.load_ref(ref, 'backbone')
-    traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein only
+if ref != 'none':
+    if aa_atom != 0:
+        ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom))
+        traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of protein 1 only
+        ref2_bb = load_data.load_ref(ref2, 'backbone and index > ' + str(aa_atom))
+        traj2_bb = traj.atom_slice(top.select('backbone and index > ' + str(aa_atom))) #Backbond atoms of protein 1 only
+    else:
+        ref_bb = load_data.load_ref(ref, 'backbone')
+        traj_bb = traj.atom_slice(top.select('backbone')) #Backbond atoms of protein only
 
 #Compute full BB RMSD
 if ref != 'none' and ref_name == 'self':
@@ -101,12 +100,17 @@ if ref != 'none' and ref_name == 'self':
         rmsd_full_uncorr2 = process_traj.compute_rmsd(traj2_bb, ref2_bb, t_full)
     
     #Save RMSD and RMSF values to CSV
-    df = pd.DataFrame({'RMSD': rmsd_full_uncorr}) 
-    df2 = pd.DataFrame({'RMSF': rmsf_data}) 
     if aa_atom != 0 and ref2 != 'none':
-        df['Prot2 RMSD'] = rmsd_full_uncorr2
-        df2['Prot2 RMSF'] = np.pad(rmsf_data2, (0,len(rmsf_data) - len(rmsf_data2)), 'constant')
-    df.to_csv(dir_name + 'rmsd_ref_' + str(ref_name) + name_add + '.csv')
+        df = pd.DataFrame({'RMSD': rmsd_full_uncorr, 'Prot2 RMSD': rmsd_full_uncorr2})
+        if len(rmsf_data) > len(rmsf_data2):
+            rmsf_data2 = np.pad(rmsf_data2, (0,len(rmsf_data) - len(rmsf_data2)), 'constant')
+        else:
+            rmsf_data =  np.pad(rmsf_data, (0,len(rmsf_data2) - len(rmsf_data)), 'constant')
+        df2 = pd.DataFrame({'RMSF': rmsf_data2, 'Prot2 RMSF': rmsf_data2})
+    else:
+        df = pd.DataFrame({'RMSD': rmsd_full_uncorr}) 
+        df2 = pd.DataFrame({'RMSF': rmsf_data})
+    df.to_csv('rmsd/rmsd_ref_' + str(ref_name) + name_add + '.csv')
     df2.to_csv('rmsf_ref_' + str(ref_name) + name_add + '.csv')
     
     np.savetxt('uncorrelated_frames' + name_add + '.txt', t_full) #Save indices for uncorrelated frames to file
@@ -154,7 +158,7 @@ if ref != 'none' and rmsd_sect != 'none':
         
         #Save RMSD to file 
         df['RMSD' + name] =  rmsd_sect_uncorr
-    df.to_csv(dir_name + 'rmsd_sections_ref_' + str(ref_name) + '.csv')
+    df.to_csv('rmsd/rmsd_sections_ref_' + str(ref_name) + '.csv')
 
     print('Section BB RMSD Completed')
 else:
