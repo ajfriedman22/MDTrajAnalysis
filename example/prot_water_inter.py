@@ -8,13 +8,13 @@ import time
 start_time = time.time()
 
 #Declare arguments
-parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
+parser = argparse.ArgumentParser(description = 'Determination of Water Mediated Interactions')
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-l', required=False, type=int, default = 0, help= 'Ligand residue ID')
 parser.add_argument('-ln', required=False, type=str, default = 'LIG', help= 'Ligand name')
-parser.add_argument('-sect', required=True, help= 'File containing sections of interest(txt)')
+parser.add_argument('-s', required=True, help= 'File containing sections of interest(txt)')
 parser.add_argument('-f', required=False, type=int, default = 0, help= 'Frame for centroid output water molecule indices')
 
 #Import Arguments
@@ -28,7 +28,7 @@ if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
 miss_res = args.m
 lig = args.l
 lig_name = args.ln
-sect_name = args.sect
+sect_name = args.s
 frame_cen = args.f
 
 #Source custom functions
@@ -41,9 +41,7 @@ sys.path.insert(1, prefix + '/protein_analysis/')
 import water_inter
 
 #Load Trajectory
-traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_ns = traj.remove_solvent()
-
+traj = load_data.mdtraj_load(File_traj, File_gro, False, True)
 
 if frame_cen != 0:
     cen_ind = []#Set aray for atom indices of water molecules for centroid
@@ -66,7 +64,7 @@ res_interest.sort()
 
 if lig != 0:
     #Test that ligand ID Assigned properly
-    test = traj_ns.topology.select('resid ' + str(lig-offset) + ' and resname ' + lig_name)
+    test = traj.topology.select('resid ' + str(lig-offset) + ' and resname ' + lig_name)
     if test.size==0:
         print('Ligand not named correctly! Exiting Immediately!')
         exit()
@@ -84,6 +82,9 @@ for i in range(len(res_interest)):
 
     #Add to master list of water_neighbors
     res_interest_water_neighbors.append(water_neighbors)
+if len(res_interest_water_neighbors) == 0:
+    print('Error No Water Neighbors Found! Exiting Immediately!')
+    exit()
 neighbor_time = time.time()
 print('Water Neighbors Found')
 
@@ -127,7 +128,7 @@ output_cen = open('water_mediated_contact_cen_index.txt', 'w')
 n = 0
 for i in range(len(res_interest)):
     for j in range(len(res_interest)):
-        if j < i:
+        if j < i and per_wat_contact[i][j] > 5:
             output.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(per_wat_contact[i][j]) + '\n')
             output_cen.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(cen_ind[n]) + '\n')
             n += 1
@@ -140,4 +141,5 @@ print('Load data: ' + str(load_time - start_time))
 print('Compute Contacts: ' + str(neighbor_time - load_time))
 print('Determine Contacts: ' + str(contact_time - neighbor_time))
 print('Output data: ' + str(output_time - contact_time))
+print('-----------------------------------------------------------------')
 
