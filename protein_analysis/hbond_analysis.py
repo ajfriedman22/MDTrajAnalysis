@@ -19,10 +19,15 @@ def deter_bond(top, res1, res2, name1, name2):
     import numpy as np
     import mdtraj as md
 
-    bond = np.zeros(3)
     donor = top.select('resid ' + str(res1) + ' and name ' + str(name1))
     acceptor = top.select('resid ' + str(res2) + ' and name ' + str(name2))
     H = top.select("resid " + str(res1) + " and element H")
+    if len(donor) == 0:
+        raise Exception(f'{name1} does not exsist in res {res1}')
+    elif len(acceptor) == 0:
+        raise Exception(f'{name2} does not exsist in res {res2}')
+    elif len(H) == 0:
+        raise Exception(f'res {res1} has no H elements')
     return donor, acceptor, H
 
 def deter_H(acceptor, H, traj_ns):
