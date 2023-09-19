@@ -20,11 +20,7 @@ parser.add_argument('-f', required=False, type=int, default = 0, help= 'Frame fo
 #Import Arguments
 args = parser.parse_args()
 File_traj = args.t
-if File_traj.split('.')[-1] != 'xtc': #Add file extension if not in input
-    File_traj = File_traj + '.xtc'
 File_gro = args.g
-if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
-    File_gro = File_gro + '.gro'
 miss_res = args.m
 lig = args.l
 lig_name = args.ln
@@ -57,21 +53,19 @@ for line in input_sect:
     sect_res = np.linspace(int(line[1]), int(line[2]), num = (int(line[2])-int(line[1])+1))
     #Add to final list
     for n in sect_res:
-        res_interest.append(n)
+        res_interest.append(int(n))
 
-#Put protein residue list array in numerical orde
+#Put protein residue list array in numerical order
 res_interest.sort()
 
 if lig != 0:
     #Test that ligand ID Assigned properly
     test = traj.topology.select('resid ' + str(lig-offset) + ' and resname ' + lig_name)
     if test.size==0:
-        print('Ligand not named correctly! Exiting Immediately!')
-        exit()
+        raise Exception('Ligand not named correctly! Exiting Immediately!')
 
     #Combine ligand and protein residues to make master list of residues of interest
     res_interest.append(lig)
-
 load_time = time.time()
 
 #Loop through each residue of interest and determine water contacts
@@ -82,9 +76,9 @@ for i in range(len(res_interest)):
 
     #Add to master list of water_neighbors
     res_interest_water_neighbors.append(water_neighbors)
+
 if len(res_interest_water_neighbors) == 0:
-    print('Error No Water Neighbors Found! Exiting Immediately!')
-    exit()
+    raise Exception('Error No Water Neighbors Found! Exiting Immediately!')
 neighbor_time = time.time()
 print('Water Neighbors Found')
 
@@ -121,19 +115,21 @@ for i in range(len(res_interest)):
             break
 contact_time = time.time()
 print('Contacts Calculated')
+print(per_wat_contact)
 
 #Print all present contacts to file
 output = open('water_mediated_contact.txt', 'w')
-output_cen = open('water_mediated_contact_cen_index.txt', 'w')
+#output_cen = open('water_mediated_contact_cen_index.txt', 'w')
 n = 0
 for i in range(len(res_interest)):
     for j in range(len(res_interest)):
-        if j < i and per_wat_contact[i][j] > 5:
+        if j < i:
             output.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(per_wat_contact[i][j]) + '\n')
-            output_cen.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(cen_ind[n]) + '\n')
+            #output_cen.write(str(res_interest[i]) + ' -- ' + str(res_interest[j]) + ': ' + str(cen_ind[n]) + '\n')
             n += 1
         else:
             break
+
 output_time = time.time()
 print('Output files written')
 
