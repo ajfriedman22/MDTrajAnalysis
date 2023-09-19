@@ -131,7 +131,6 @@ def remove_uncorr(file_name, traj):
     
     return traj_uncorr
 
-#
 def hbond_txt_to_df(file_name):
     import pandas as pd
 
