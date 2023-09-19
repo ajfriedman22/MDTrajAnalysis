@@ -194,8 +194,7 @@ if lig != 'none':
     else:
         ref_ns = load_data.load_ref(lig_ref, 'backbone or resname ' + lig)
         traj_ns = traj.atom_slice(traj.topology.select('backbone or resname ' + lig))
-    print(ref_ns)
-    print(traj_ns)
+
     if ref_ns.n_atoms != traj_ns.n_atoms:
         raise Exception(f'Reference and Trajectory sections do not match for ligand alignment')
 
