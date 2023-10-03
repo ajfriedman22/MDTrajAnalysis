@@ -8,7 +8,6 @@ import os.path
 from itertools import product
 import warnings
 import pandas as pd
-import re
 from tqdm import tqdm
 
 #Silence MDTraj Warnings
