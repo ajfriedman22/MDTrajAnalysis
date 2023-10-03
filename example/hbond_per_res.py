@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 import sys
 import os.path
+import pandas as pd
 
 class ProgressBar(object):
     DEFAULT = 'Progress: %(bar)s %(percent)3d%%'
@@ -47,6 +48,7 @@ parser = argparse.ArgumentParser(description = 'Determination of Percentage of t
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-p', required=True, help= 'Text file containing file path for h-bonds of interest (one file per line)')
+parser.add_argument('-n', required=False, type=str, default='interest', help= 'Name for output file')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 
 #Import Arguments
@@ -55,6 +57,7 @@ File_traj = args.t
 File_gro = args.g
 File_path = args.p
 miss_res = args.m
+name = args.n
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -78,62 +81,51 @@ input_paths = open(File_path, 'r').readlines()
 for i in input_paths:
     input_df = pd.read_csv(i.strip())
     for index, row in input_df.iterrows():
-        bond = row['Donor Residue Name'] + str(row['Donor Residue ID']) + '-' + row['Acceptor Residue Name'] + str(row['Acceptor Residue ID'])
-   
-        n_clean = n.strip()
-        line = n_clean.split(' ')
+        bond = str(row['Donor Residue ID']) + str(row['Donor Residue Name']) + ' - ' + str(row['Acceptor Residue ID']) + str(row['Acceptor Residue Name'])
         if bond not in name_bonds:
-            name_bonds.append(line[0])
-            options_bond.append(line[1:])
+            name_bonds.append(bond)
+            options_bond.append([row['Donor Residue Name'],  row['Donor Residue ID'], [row['Donor Atom Name']], row['Acceptor Residue Name'], row['Acceptor Residue ID'], [row['Acceptor Atom Name']]])
+        else:
+            if len(options_bond) == 0:
+                options_bond.append([row['Donor Residue Name'],  row['Donor Residue ID'], [row['Donor Atom Name']], row['Acceptor Residue Name'], row['Acceptor Residue ID'], [row['Acceptor Atom Name']]])
+            else:
+                for n in range(len(options_bond)):
+                    [d_res, d_id, d_atom, a_res, a_id, a_atom] = options_bond[n]
+                    if row['Donor Residue ID'] == d_id and row['Acceptor Residue ID'] == a_id:
+                        if row['Donor Atom Name'] not in [d_atom] or row['Acceptor Atom Name'] not in [a_atom]:
+                            d_atom = [d_atom] + [row['Donor Atom Name']]
+                            a_atom = [a_atom] + [row['Acceptor Atom Name']]
+                            options_bond[n] = [d_res, d_id, d_atom, a_res, a_id, a_atom]
 
-hbonds_all, hbonds_all_full = [],[]
-        for index, row in input_df.iterrows():
-            bond_full = row['Donor Residue Name'] + str(row['Donor Residue ID']) + '-' + row['Donor Atom Name'] + ' -- ' + row['Acceptor Residue Name'] + str(row['Acceptor Residue ID']) + '-' + row['Acceptor Atom Name']
-            bond = row['Donor Residue Name'] + str(row['Donor Residue ID']) + '-' + row['Acceptor Residue Name'] + str(row['Acceptor Residue ID'])
-            if bond not in hbond_line:
-                hbond_line.append(bond)
-                hbond_line_full.append(bond_full)
-    hbonds_all.append(hbond_line)
-    hbonds_all_full.append(hbond_line_full)
-    hbonds_condition_name.append(line_sep[0])
-
-#Output file for bond 
-output = open('Hbond_per_res.txt', 'w') #percentage of time each bond occurs
-
-#Declare array for bond correlations
-num_bonds = len(name_bonds)
-
-#track bond indicies
 #Determine the percent of time each bond combination is present
-for i in range(num_bonds):
-    res1 = int(options_bond[i][0]) - miss_res
-    res2 = int(options_bond[i][1]) - miss_res
-    name1_options = [options_bond[i][2], options_bond[i][4], options_bond[i][6], options_bond[i][8]]
-    name2_options = [options_bond[i][3], options_bond[i][5], options_bond[i][7], options_bond[i][9]]
-    count_bond = np.zeros(traj_prot.n_frames)
+per = np.zeros(len(name_bonds))
+for i in range(len(name_bonds)):
+    donor_res = int(options_bond[i][1]) - offset
+    acceptor_res = int(options_bond[i][4]) - offset
+    donor_options = options_bond[i][2]
+    acceptor_options = options_bond[i][5]
+    count_bond = np.zeros(traj.n_frames)
 
     #If h-bond is between residues present in trajectory
-    if int(res1) >= 0 and int(res2) >= 0 and int(res1) < (traj_prot.n_residues-1) and int(res2) < (traj_prot.n_residues-1):
-        for x in range(len(name1_options)):
-            if name1_options[x] != 'nan':
-                donor, acceptor, H = hbond_analysis.deter_bond(top, res1, res2, name1_options[x], name2_options[x])
+    if int(donor_res) >= 0 and int(acceptor_res) >= 0 and int(donor_res) < (traj.n_residues-1) and int(acceptor_res) < (traj.n_residues-1):
+        for x in range(len(donor_options)):
+            donor, acceptor, H = hbond_analysis.deter_bond(traj.topology, donor_res, acceptor_res, donor_options[x], acceptor_options[x])
 
-                #Determine hydrogen with minimum distance
-                H_min, dist = hbond_analysis.deter_H(acceptor, H, traj_prot)
+            #Determine hydrogen with minimum distance
+            H_min, dist = hbond_analysis.deter_H(acceptor, H, traj)
 
-                #Determine angle b/w donor and acceptor
-                bond_a = np.array([[donor[0], H_min, acceptor[0]]])
+            #Determine angle b/w donor and acceptor
+            bond_a = np.array([[donor[0], H_min, acceptor[0]]])
 
-                #Compute distances and angles over time for both bonds
-                angle = md.compute_angles(traj_prot, bond_a , periodic = False)
+            #Compute distances and angles over time for both bonds
+            angle = md.compute_angles(traj, bond_a , periodic = False)
         
-                #Determine the percent of time both bonds are formed
-                for k in range(len(dist)):
-                    if dist[k] <= 0.25 and angle[k][0] >= 2.094 and count_bond[k] == 0:
-                        count_bond[k] = 1
-
-        output.write(name_bonds[i] + ' ' + str(100*sum(count_bond)/len(dist)) + '\n')
-    else:
-        output.write(name_bonds[i] + ' 0\n')
+            #Determine the percent of time both bonds are formed
+            for k in range(len(dist)):
+                if dist[k] <= 0.25 and angle[k][0] >= 2.094 and count_bond[k] == 0:
+                    count_bond[k] = 1
+        per[i] = 100*sum(count_bond)/len(dist)
+df = pd.DataFrame({'Bond Name': name_bonds, 'Occupancy %': per})
+df.to_csv('Hbonds_per_' + name + '.csv')
 
 print('Hbond Percentages Calculated')
