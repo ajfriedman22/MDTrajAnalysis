@@ -67,11 +67,11 @@ def uncorr_ind(data):
     n = len(raw)
     sigma = stdev(raw)
     #t_uncorr = algo.predict(pen = np.log(n) * sigma**2)
-    t_uncorr = algo.predict(epsilon=3 * n * sigma ** 2)
-
+    t_uncorr = algo.predict(epsilon=0.2 * n * sigma ** 2)
+    
     #Raise Warning if Ruptures Supplied fewer than 100 uncorrelated samples
     if len(t_uncorr) < 100:
-        raise Warning('Low Number of Uncorrelated Samples Found! Review supplied array!')
+        raise Warning('Low Number of Uncorrelated Samples Found! Review supplied array! n_uncorr = ' + str(len(t_uncorr)))
     
     return t_uncorr
 
@@ -135,11 +135,14 @@ def compute_rmsd(traj, ref, t_uncorr = 'none'):
     
     rmsd = md.rmsd(traj, ref, parallel=True, precentered=False)
 
-    if t_uncorr == 'none':
-        t = uncorr_ind(rmsd)
-    else: 
-        t = t_uncorr
-    rmsd_uncorr = uncorr_sort(rmsd, t)
+    if t_uncorr == 'N/A':
+        rmsd_uncorr = rmsd
+    else:
+        if t_uncorr == 'none':
+            t = uncorr_ind(rmsd)
+        else: 
+            t = t_uncorr
+        rmsd_uncorr = uncorr_sort(rmsd, t)
 
     if t_uncorr == 'none':
         return rmsd_uncorr, t

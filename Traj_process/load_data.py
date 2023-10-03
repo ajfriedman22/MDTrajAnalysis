@@ -130,3 +130,23 @@ def remove_uncorr(file_name, traj):
         traj_uncorr = traj
     
     return traj_uncorr
+
+def hbond_txt_to_df(file_name):
+    import pandas as pd
+
+    input_file = open(file_name, 'r').readlines()
+    donor_resname, donor_id, donor_name = [],[],[]
+    acceptor_resname, acceptor_id, acceptor_name = [],[],[]
+    for i in input_file:
+        bond_name = i.split(':')
+        [donor, acceptor] = bond_name[0].split('--')
+        [donor_res, donor_atom_name] = donor.split('-')
+        [acceptor_res, acceptor_atom_name] = acceptor.split('-')
+        donor_resname.append(donor_res.rstrip('0123456789'))
+        donor_id.append(donor_res[3:])
+        donor_name.append(donor_atom_name)
+        acceptor_resname.append(acceptor_res.rstrip('0123456789').strip(' '))
+        acceptor_id.append(acceptor_res[4:])
+        acceptor_name.append(acceptor_atom_name)
+    df = pd.DataFrame({'Donor Residue Name': donor_resname, 'Donor Residue ID': donor_id, 'Donor Atom Name': donor_name, 'Acceptor Residue Name': acceptor_resname, 'Acceptor Residue ID': acceptor_id, 'Acceptor Atom Name': acceptor_name})
+    return df

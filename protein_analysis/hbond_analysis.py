@@ -20,7 +20,6 @@ def deter_bond(top, res1, res2, name1, name2):
     import mdtraj as md
     import sys
 
-    bond = np.zeros(3)
     donor = top.select('resid ' + str(res1) + ' and name ' + str(name1))
     acceptor = top.select('resid ' + str(res2) + ' and name ' + str(name2))
     H = top.select("resid " + str(res1) + " and element H")

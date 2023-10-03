@@ -60,7 +60,8 @@ lig_res = load_data.lig_check(lig, miss_res, traj_uncorr, lig_name)
 sections = open(res_bind_file, 'r').readlines()
 res_bind = []
 for i in range(len(sections)):
-    name, sect = load_data.read_sections(sections, i, miss_res, 1, 1)
+    name, sect = load_data.read_sections(sections, i, miss_res, traj_uncorr.topology, 1, 1)
+
     for n in sect:
         res_bind.append(n)
 

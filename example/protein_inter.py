@@ -8,55 +8,18 @@ import os.path
 from itertools import product
 import warnings
 import pandas as pd
-import re
-
-
-class ProgressBar(object):
-    DEFAULT = 'Progress: %(bar)s %(percent)3d%%'
-    FULL = '%(bar)s %(current)d/%(total)d (%(percent)3d%%) %(remaining)d to go'
-
-    def __init__(self, total, width=40, fmt=DEFAULT, symbol='=',
-                 output=sys.stderr):
-        assert len(symbol) == 1
-
-        self.total = total
-        self.width = width
-        self.symbol = symbol
-        self.output = output
-        self.fmt = re.sub(r'(?P<name>%\(.+?\))d',
-            r'\g<name>%dd' % len(str(total)), fmt)
-
-        self.current = 0
-
-    def __call__(self):
-        percent = self.current / float(self.total)
-        size = int(self.width * percent)
-        remaining = self.total - self.current
-        bar = '[' + self.symbol * size + ' ' * (self.width - size) + ']'
-
-        args = {
-            'total': self.total,
-            'bar': bar,
-            'current': self.current,
-            'percent': percent * 100,
-            'remaining': remaining
-        }
-        print('\r' + self.fmt % args, file=self.output, end='')
-
-    def done(self):
-        self.current = self.total
-        self()
-        print('', file=self.output)
+from tqdm import tqdm
 
 #Silence MDTraj Warnings
 warnings.filterwarnings("ignore")
 
 #Declare arguments
-parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
+parser = argparse.ArgumentParser(description = 'Determination of Protein Interactions')
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-s', required=True, help= 'File containing sections of interest(txt)')
+parser.add_argument('-n', required=True, help= 'Number of protein residues')
 
 #Import Arguments
 args = parser.parse_args()
@@ -76,24 +39,31 @@ import load_data
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro, True, True)
 top = traj.topology
+num_prot_res = args.n
 
 #Load sections of interest file
 sections = open(sect, 'r').readlines()
 
 #Check if output should go to seperate directory
-if os.path.exists('./prot_inter/'):
-    dir_name = 'prot_inter/'
-else:
-    dir_name = ''
-
-progress = ProgressBar(len(sections), fmt=ProgressBar.FULL)
+if not os.path.exists('./prot_inter/'):
+    os.mkdir('prot_inter')
 
 #Loop through sections of interest
-for i in range(progress.total):
+for i in tqdm(range(len(sections))):
     #Input sections from file
-    name1, name2, sect1, sect2 = load_data.read_sections(sections, i, miss_res, top)
+    name1, name2, sect1, sect2 = load_data.read_sections(sections, i, miss_res, top, num_prot_res)
     res_pairs = list(product(sect1, sect2))
-    
+    if max(sect1) > traj.n_residues:
+        print('Error Refernceing Atoms not in trajectory!')
+        print(sect1)
+        print(traj)
+        exit()
+    elif max(sect2) > traj.n_residues:
+        print('Error Refernceing Atoms not in trajectory')
+        print(traj)
+        print(sect2)
+        exit()
+
     #Compute smallest distance from heavy atoms
     [dist, pairs] = md.compute_contacts(traj, contacts=res_pairs, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
 
@@ -128,15 +98,13 @@ for i in range(progress.total):
             hc_per.append(per_contact)
     
     #Reformat and save DF
-    df_per.to_csv(dir_name + name1 + '_' + name2 + '_inter_per.csv') 
+    df_per.to_csv('prot_inter/' + name1 + '_' + name2 + '_inter_per.csv') 
     df_hc = pd.DataFrame({'Residue 1': hc_res1, 'Residue 2': hc_res2, 'Contact %': hc_per})
-    df_hc.to_csv(dir_name + name1 + '_' + name2 + '_high_contact.csv') 
+    df_hc.to_csv('prot_inter/' + name1 + '_' + name2 + '_high_contact.csv') 
 
     #Output total contacts for section
     df_tot = pd.DataFrame({'Total Interactions': tot_inter})
-    df_tot.to_csv(dir_name + name1 + '_' + name2 + '_tot_inter.csv') 
-    progress.current += 1
-    progress()
-progress.done()
+    df_tot.to_csv('prot_inter/' + name1 + '_' + name2 + '_tot_inter.csv') 
+
 print('Protein Interaction Analysis Complete')
 print('-------------------------------------------------------------')
