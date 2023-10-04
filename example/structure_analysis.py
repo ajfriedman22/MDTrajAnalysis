@@ -8,7 +8,7 @@ import warnings
 import pandas as pd
 
 #Silence MDTraj Warnings
-#warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
