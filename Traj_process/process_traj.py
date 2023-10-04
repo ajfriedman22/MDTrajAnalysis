@@ -135,11 +135,14 @@ def compute_rmsd(traj, ref, t_uncorr = 'none'):
     
     rmsd = md.rmsd(traj, ref, parallel=True, precentered=False)
 
-    if t_uncorr == 'none':
-        t = uncorr_ind(rmsd)
-    else: 
-        t = t_uncorr
-    rmsd_uncorr = uncorr_sort(rmsd, t)
+    if t_uncorr == 'N/A':
+        rmsd_uncorr = rmsd
+    else:
+        if t_uncorr == 'none':
+            t = uncorr_ind(rmsd)
+        else: 
+            t = t_uncorr
+        rmsd_uncorr = uncorr_sort(rmsd, t)
 
     if t_uncorr == 'none':
         return rmsd_uncorr, t

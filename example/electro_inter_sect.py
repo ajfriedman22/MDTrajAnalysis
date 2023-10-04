@@ -17,11 +17,7 @@ parser.add_argument('-sect', required=False, type=str, default = 'none', help= '
 #Import Arguments
 args = parser.parse_args()
 File_traj = args.t
-if File_traj.split('.')[-1] != 'xtc': #Add file extension if not in input
-    File_traj = File_traj + '.xtc'
 File_gro = args.g
-if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
-    File_gro = File_gro + '.gro'
 miss_res = args.m
 freq_set = args.f
 input_file = args.sect
@@ -36,17 +32,14 @@ sys.path.insert(1, prefix + '/protein_analysis/')
 import hbond_analysis
 
 #Load Trajectory
-traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
-traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
-del traj; del traj_uncorr #Save space
+traj = load_data.mdtraj_load(File_traj, File_gro, True, True)
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
 #Determine list of H-bonds present in the trajectory for over 60% of the frames
-hbonds = md.baker_hubbard(traj_ns, freq=freq_set, exclude_water=True, periodic=False)
-label = lambda hbond : '%s -- %s' % (traj_ns.topology.atom(hbond[0]), traj_ns.topology.atom(hbond[2])) #Extract labels for h-bonds
+hbonds = md.baker_hubbard(traj, freq=freq_set, exclude_water=True, periodic=False)
+label = lambda hbond : '%s -- %s' % (traj.topology.atom(hbond[0]), traj.topology.atom(hbond[2])) #Extract labels for h-bonds
 
 print('Hbonds Determined')
 
@@ -55,18 +48,18 @@ if input_file != 'none':
     sections = open(input_file, 'r').readlines()
     res_interest = []
     for i in range(len(sections)):
-        name, sect = load_data.read_sections(sections, i, miss_res, 1, 1)
+        name, sect = load_data.read_sections(sections, i, miss_res, traj.topology, 1, 1)
         for n in sect:
             res_interest.append(int(n))
 else:
-    res_interest = np.linspace(0, traj_ns.n_residues(), num = traj_ns.n_residues())
+    res_interest = np.linspace(0, traj.n_residues(), num = traj.n_residues())
 
 #Open output files
 output_hbond = open('Hbonds_sect.txt', 'w')
 
 #Determine % bond formed and sort salt bridges
-da_distances = md.compute_distances(traj_ns, hbonds[:,[1,2]], periodic=False) #Compute distance between h-bond donor and acceptor
-da_angles = md.compute_angles(traj_ns, hbonds[:,:], periodic=False) #Compute angle between h-bond donor and acceptor
+da_distances = md.compute_distances(traj, hbonds[:,[1,2]], periodic=False) #Compute distance between h-bond donor and acceptor
+da_angles = md.compute_angles(traj, hbonds[:,:], periodic=False) #Compute angle between h-bond donor and acceptor
 [num_t, num_h] = np.shape(da_distances) #save values for number of frames(num_t) and number of bonds(num_b) to caculate
 for j in range(len(hbonds)):
     bond = label(hbonds[j])

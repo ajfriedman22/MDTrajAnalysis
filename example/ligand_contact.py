@@ -8,26 +8,22 @@ import os.path
 from itertools import product
 
 #Declare arguments
-parser = argparse.ArgumentParser(description = 'Determination of DSSP, H-bonds, Ligand Contacts, protein and ligand RMSD, Helical interactions and PCA for GROMACS Trajectory of PTP1B')
+parser = argparse.ArgumentParser(description = 'Determination of Ligand Residue Contacts')
 parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-l', required=True, type = int, help= 'Ligand residue number')
 parser.add_argument('-ln', required=False, default = 'LIG', type = str, help= 'Ligand name in GRO file')
-parser.add_argument('-sect', required=False, default = 'none', help= 'File containing sections of interest(txt)')
+parser.add_argument('-s', required=False, default = 'none', help= 'File containing sections of interest(txt)')
 
 #Import Arguments
 args = parser.parse_args()
 File_traj = args.t
-if File_traj.split('.')[-1] != 'xtc': #Add file extension if not in input
-    File_traj = File_traj + '.xtc'
 File_gro = args.g
-if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
-    File_gro = File_gro + '.gro'
 miss_res = args.m
 lig = args.l
 lig_name = args.ln
-sect = args.sect
+sect = args.s
 if sect.split('.')[-1] != 'txt' and sect != 'none': #Add default file extension if not in input
     sect = sect + '.txt'
 
@@ -38,10 +34,7 @@ sys.path.insert(1, prefix + '/Traj_process/')
 import load_data 
 
 #Load Trajectory
-traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
-traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
-del traj; del traj_uncorr #Save space
+traj_ns = load_data.mdtraj_load(File_traj, File_gro, True, True)
 top = traj_ns.topology
 
 #Determine indices of protein and ligand residues in topology
@@ -53,6 +46,8 @@ res_pairs = list(product([lig_res], prot_res))
 [dist, pairs] = md.compute_contacts(traj_ns, contacts=res_pairs, scheme='closest-heavy', ignore_nonprotein = False, periodic=True, soft_min = False)
 
 #Output % contact for each residue
+if not os.path.exists('lig_inter'):
+    os.mkdir('lig_inter')
 output_per = open('lig_inter/residue_lig_per.txt', 'w')
 output_high_contact = open('lig_inter/residue_lig_high_contact.txt', 'w')
 

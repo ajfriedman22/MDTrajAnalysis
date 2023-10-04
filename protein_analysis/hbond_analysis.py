@@ -18,11 +18,20 @@ def bond_per(traj_ns, hbonds):
 def deter_bond(top, res1, res2, name1, name2):
     import numpy as np
     import mdtraj as md
+    import sys
 
-    bond = np.zeros(3)
     donor = top.select('resid ' + str(res1) + ' and name ' + str(name1))
     acceptor = top.select('resid ' + str(res2) + ' and name ' + str(name2))
     H = top.select("resid " + str(res1) + " and element H")
+    if len(donor) == 0:
+        print('Atom ' + str(name1) + ' does not exist in residue ' + str(res1))
+        sys.exit()
+    elif len(acceptor) == 0:
+        print('Atom ' + str(name2) + ' does not exist in residue ' + str(res2))
+        sys.exit()
+    elif len(H) == 0:
+        print('Residue ' + str(res1) + ' contains no H elements')
+        sys.exit()
     return donor, acceptor, H
 
 def deter_H(acceptor, H, traj_ns):
