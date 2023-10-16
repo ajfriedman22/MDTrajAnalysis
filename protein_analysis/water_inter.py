@@ -16,7 +16,7 @@ def water_neighbor(traj, res, offset, res_not_water, atom_or_res='res'):
         res_ind = res
 
     #Compute neighboring atoms for all residues of interest
-    neighbors = md.compute_neighbors(traj, 0.35, res_ind, haystack_indices=None, periodic=False)
+    neighbors = md.compute_neighbors(traj, 0.4, res_ind, haystack_indices=None, periodic=False)
     
     #Determine which neighbors are water molecules
     top = traj.topology
