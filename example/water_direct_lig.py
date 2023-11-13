@@ -127,15 +127,23 @@ for t in range(frames):
 print('Water Mediated Atoms Found')
 
 #Determine minimum distance between residues engaged in water mediated and direct intereactions
-df = pd.DataFrame()
+main_df = pd.DataFrame()
 for res in res_interest_wat:
+    print(res)
     globals()[f'min_neighbor_dist_{res}'] = []
     for t in range(len(globals()[f'atom_water_{res}'])):
-        atom_pairs = list(product(direct_contact_atom[t], [globals()[f'atom_water_{res}'][t]]))
-        traj_frame = traj.slice(t)
-        dist = md.compute_distances(traj_frame, atom_pairs)
-        globals()[f'min_neighbor_dist_{res}'].append(np.min(dist[0]))
-    df[res] = globals()[f'min_neighbor_dist_{res}']
+        if globals()[f'atom_water_{res}'][t] in direct_contact_atom[t]:
+            globals()[f'min_neighbor_dist_{res}'].append(0)
+        else:
+            atom_pairs = list(product(direct_contact_atom[t], [globals()[f'atom_water_{res}'][t]]))
+            traj_frame = traj.slice(t)
+            dist = md.compute_distances(traj_frame, atom_pairs)
+            print(np.min(dist[0]))
+            globals()[f'min_neighbor_dist_{res}'].append(np.min(dist[0]))
+    df = pd.DataFrame({res: globals()[f'min_neighbor_dist_{res}']})
+    
+    #Add to main DF
+    main_df = pd.concat([main_df, df])
 
 #Print all present contacts to file
 df.to_csv('water_direct_lig.csv')
