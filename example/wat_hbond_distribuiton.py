@@ -39,22 +39,23 @@ sys.path.insert(1, prefix + '/protein_analysis/')
 import water_inter
 
 #Load Trajectory
-traj = load_data.mdtraj_load(File_traj, File_gro, False, True)
+traj = load_data.mdtraj_load(File_traj, File_gro, False, False)
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
 #Determine protein residues to examine based on sections of interest
 input_sect = open(sect_name, 'r').readlines()
-res_interest = []
-for line in input_sect:
+res_interest, compute_lig = [],[]
+for i, line in enumerate(input_sect):
     sect_res = line.split()
     #Add to final list
     for n in sect_res:
         res_interest.append(int(n))
-
-#Put protein residue list array in numerical order
-res_interest.sort()
+        if i == 0:
+            compute_lig.append(True)
+        else:
+            compute_lig.append(False)
 
 if lig != 0:
     #Test that ligand ID Assigned properly
@@ -83,37 +84,52 @@ main_df = pd.DataFrame()
 for r, res in enumerate(res_interest):
     water_neighbors_res = res_interest_water_neighbors[r]
     res_atoms = traj.topology.select(f'resid {res-offset}')
-    dist_tot_lig = np.zeros(traj.n_frames)
+    if compute_lig[r]:
+        dist_tot_lig = np.zeros(traj.n_frames)
     dist_tot_res = np.zeros(traj.n_frames)
     for t in tqdm(range(traj.n_frames)):
         #Get just this frame from the trajectory
         traj_t = traj.slice(t)
-        #Determine common water neighbors during this frame
-        water_neighbors_lig_t = water_neighbors_lig[t]
-        water_neighbors_res_t = water_neighbors_res[t]
-        common_neighbors = set(water_neighbors_lig_t) & set(water_neighbors_res_t)
-        if len(common_neighbors) != 0:
-            #Get indices for water molecules
-            water_index = []
-            for wat in common_neighbors:
+        if compute_lig[r]:
+            #Determine common water neighbors during this frame
+            water_neighbors_lig_t = water_neighbors_lig[t]
+            water_neighbors_res_t = water_neighbors_res[t]
+            common_neighbors = set(water_neighbors_lig_t) & set(water_neighbors_res_t)
+            if len(common_neighbors) != 0:
+                #Get indices for water molecules
+                water_index = []
+                for wat in common_neighbors:
+                    wat_atoms = traj.topology.select(f'resid {wat-offset}')
+                    for atom in wat_atoms:
+                        water_index.append(atom)
+                #Determine minimum distance between water molecule and ligand
+                lig_pairs = list(product(lig_atoms, water_index))
+                dist_lig = md.compute_distances(traj_t, atom_pairs=lig_pairs)
+                dist_tot_lig[t] = np.min(dist_lig[0])
+            
+                #Determine minimum distance between water molecule and protein residue
+                res_pairs = list(product(res_atoms, water_index))
+                dist_res = md.compute_distances(traj_t, atom_pairs=res_pairs)
+                dist_tot_res[t] = np.min(dist_res[0])
+            else:
+                dist_tot_lig[t] = 0.4
+                dist_tot_res[t] = 0.4
+        else:
+            #Get water atoms
+            water_neighbors_res_t = water_neighbors_res[t]
+            for wat in water_neighbors_res_t:
                 wat_atoms = traj.topology.select(f'resid {wat-offset}')
                 for atom in wat_atoms:
                     water_index.append(atom)
-            #Determine minimum distance between water molecule and ligand
-            lig_pairs = list(product(lig_atoms, water_index))
-            dist_lig = md.compute_distances(traj_t, atom_pairs=lig_pairs)
-            dist_tot_lig[t] = np.min(dist_lig[0])
-            
             #Determine minimum distance between water molecule and protein residue
             res_pairs = list(product(res_atoms, water_index))
             dist_res = md.compute_distances(traj_t, atom_pairs=res_pairs)
             dist_tot_res[t] = np.min(dist_res[0])
-        else:
-            dist_tot_lig[t] = 0.4
-            dist_tot_res[t] = 0.4
-    df = pd.DataFrame({'Distance': dist_tot_lig*10, 'Side': ['Ligand']*len(dist_tot_lig), 'Residue': [res]*len(dist_tot_lig)})
-    df2 = pd.DataFrame({'Distance': dist_tot_res*10, 'Side': ['Residue']*len(dist_tot_lig), 'Residue': [res]*len(dist_tot_lig)})
-    main_df = pd.concat([main_df, df])
+
+    if compute_lig[r]:
+        df = pd.DataFrame({'Distance': dist_tot_lig*10, 'Side': ['Ligand']*len(dist_tot_lig), 'Residue': [res]*len(dist_tot_lig)})
+        main_df = pd.concat([main_df, df])
+    df2 = pd.DataFrame({'Distance': dist_tot_res*10, 'Side': ['Residue']*len(dist_tot_res), 'Residue': [res]*len(dist_tot_res)})
     main_df = pd.concat([main_df, df2])
 main_df.to_csv('water_med_inter_dist.csv')
 print(main_df.groupby('Residue')['Distance'].mean())
