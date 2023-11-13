@@ -4,6 +4,8 @@ import argparse
 import sys
 import os.path
 import time
+import pandas as pd
+from tqdm import tqdm
 
 start_time = time.time()
 
@@ -15,6 +17,7 @@ parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply t
 parser.add_argument('-l', required=False, type=int, default = 0, help= 'Ligand residue ID')
 parser.add_argument('-ln', required=False, type=str, default = 'LIG', help= 'Ligand name')
 parser.add_argument('-s', required=True, help= 'File containing sections of interest(txt)')
+parser.add_argument('-sf', required=False, default=False, help='Is input in section format? (Otherwise list individual residues)')
 
 #Import Arguments
 args = parser.parse_args()
@@ -24,6 +27,7 @@ miss_res = args.m
 lig = args.l
 lig_name = args.ln
 sect_name = args.s
+sect_format = args.sf
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -45,22 +49,25 @@ input_sect = open(sect_name, 'r').readlines()
 res_interest = []
 for line in input_sect:
     line = line.split()
-    sect_res = np.linspace(int(line[0]), int(line[1]), num = (int(line[1])-int(line[0])+1))
-    #Add to final list
-    for n in sect_res:
-        res_interest.append(int(n))
+    if sect_format:
+        sect_res = np.linspace(int(line[0]), int(line[1]), num = (int(line[1])-int(line[0])+1))
+        #Add to final list
+        for n in sect_res:
+            res_interest.append(int(n))
+    else:
+        for n in line:
+            res_interest.append(int(n))
 
 #Put protein residue list array in numerical order
 res_interest.sort()
 
-if lig != 0:
-    #Test that ligand ID Assigned properly
-    test = traj.topology.select('resid ' + str(lig-offset) + ' and resname ' + lig_name)
-    if test.size==0:
-        raise Exception('Ligand not named correctly! Exiting Immediately!')
+#Test that ligand ID Assigned properly
+test = traj.topology.select('resid ' + str(lig-offset) + ' and resname ' + lig_name)
+if test.size==0:
+    raise Exception('Ligand not named correctly! Exiting Immediately!')
 
-    #Get water mediated interactions with ligand
-    water_neighbors_lig = water_inter.water_neighbor(traj, lig, offset, lig)
+#Get water mediated interactions with ligand
+water_neighbors_lig = water_inter.water_neighbor(traj, lig, offset, lig)
 load_time = time.time()
 
 #Loop through each residue of interest and determine water contacts
@@ -82,7 +89,7 @@ frames = len(res_interest_water_neighbors[0])
 
 #Determine percent water mediated contacts between all residues of interest
 transition_time = []
-for i in range(len(res_interest)):
+for i in tqdm(range(len(res_interest))):
     trans_time_res = []
     water_contactA = res_interest_water_neighbors[i]
             
@@ -113,14 +120,13 @@ contact_time = time.time()
 print('Contacts Calculated')
 
 #Print all present contacts to file
-output = open('water_med_trans_time.txt', 'w')
-#output_cen = open('water_mediated_contact_cen_index.txt', 'w')
-n = 0
-for i in range(len(res_interest)):
-    output.write(str(res_interest[i]) + ': ' + str(transition_time[i]) + '\n')
-    output.write(str(res_interest[i]) + ': ' + str(np.max(transition_time[i])) + '\n')
-    output.write(str(res_interest[i]) + ': ' + str(sum(transition_time[i])) + '\n')
 
+main_df = pd.DataFrame()
+for r, res in enumerate(res_interest):
+    df = pd.DataFrame({'Residue': [res]*len(transition_time[r]), 'Transition time': transition_time[r]})
+    main_df = pd.concat([main_df, df])
+main_df.to_csv('water_med_trans_time.csv')
+print(main_df.groupby('Residue')['Transition time'].mean())
 output_time = time.time()
 print('Output files written')
 
