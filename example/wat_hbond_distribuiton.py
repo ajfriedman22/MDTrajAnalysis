@@ -50,9 +50,9 @@ res_interest, compute_lig = [],[]
 for i, line in enumerate(input_sect):
     sect_res = line.split()
     #Add to final list
-    for n in sect_res:
+    for n in sect_res[1:]:
         res_interest.append(int(n))
-        if i == 0:
+        if sect_res[0].lower() == 'ligand':
             compute_lig.append(True)
         else:
             compute_lig.append(False)
@@ -80,7 +80,8 @@ if len(res_interest_water_neighbors) == 0:
 neighbor_time = time.time()
 print('Water Neighbors Found')
 
-main_df = pd.DataFrame()
+ligand_df = pd.DataFrame()
+control_df = pd.DataFrame()
 for r, res in enumerate(res_interest):
     water_neighbors_res = res_interest_water_neighbors[r]
     res_atoms = traj.topology.select(f'resid {res-offset}')
@@ -128,8 +129,13 @@ for r, res in enumerate(res_interest):
 
     if compute_lig[r]:
         df = pd.DataFrame({'Distance': dist_tot_lig*10, 'Side': ['Ligand']*len(dist_tot_lig), 'Residue': [res]*len(dist_tot_lig)})
-        main_df = pd.concat([main_df, df])
+        ligand_df = pd.concat([ligand_df, df])
     df2 = pd.DataFrame({'Distance': dist_tot_res*10, 'Side': ['Residue']*len(dist_tot_res), 'Residue': [res]*len(dist_tot_res)})
-    main_df = pd.concat([main_df, df2])
-main_df.to_csv('water_med_inter_dist.csv')
-print(main_df.groupby('Residue')['Distance'].mean())
+    if compute_lig[r]:
+        ligand_df = pd.concat([ligand_df, df2])
+    else:
+        control_df = pd.concat([control_df, df2])
+ligand_df.to_csv('water_med_inter_dist.csv')
+print(ligand_df.groupby('Residue')['Distance'].mean())
+if not control_df.empty:
+    control_df.to_csv('water_med_inter_dist_control.csv')
