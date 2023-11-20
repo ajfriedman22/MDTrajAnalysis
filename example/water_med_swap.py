@@ -94,25 +94,29 @@ for i in tqdm(range(len(res_interest))):
     water_contactA = res_interest_water_neighbors[i]
             
     #sort through frames to determine frames per swap
-    count = 0
-    ref_water = [-1]
+    common_contact = []
+    #Get common waters
     for t in range(frames):
         #determine common elements in this frame
         water_contactA_t = water_contactA[t]
         water_contact_lig_t = water_neighbors_lig[t]
-        common_contact = set(water_contactA_t) & set(water_contact_lig_t)
-        if common_contact: #If water mediated interaction present
-            if set(common_contact) & set(ref_water):
-                count += 1
-            else:
-                trans_time_res.append(count/frames*300)
+        prot_water_lig = set(water_contactA_t) & set(water_contact_lig_t)
+        common_contact.append(prot_water_lig)
+    #set buffer for frames
+    buffer = 5
+    count = 0
+    ref_water = common_contact[0]
+    for t in range(frames-buffer):
+        for b in range(buffer):
+            if set(ref_water) & set(common_contact[t+b]):
+                count += 1+b
+                t=t+b
+                break
+            elif b==buffer:
+                if count > 0:
+                    trans_time_res.append(count/frames*300)
                 count = 0
-                ref_water = common_contact
-        else: #No water mediated interaction present
-            if count > 0:
-                trans_time_res.append(count/frames*300)
-            count = 0
-            ref_water = [-1]
+                ref_water = common_contact[t]
     while 0.0 in trans_time_res:
         trans_time_res.remove(0.0)
     transition_time.append(trans_time_res)
