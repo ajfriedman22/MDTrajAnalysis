@@ -21,7 +21,7 @@ File_gro = args.g
 if File_gro.split('.')[-1] != 'gro': #Add default file extension if not in input
     File_gro = File_gro + '.gro'
 miss_res = args.m
-sect = args.sect
+sect = args.s
 if sect.split('.')[-1] != 'txt' and sect != 'none': #Add default file extension if not in input
     sect = sect + '.txt'
 
@@ -33,10 +33,7 @@ import load_data
 
 #Load Trajectory
 traj = load_data.mdtraj_load(File_traj, File_gro)
-traj_uncorr = load_data.remove_uncorr('uncorrelated_frames.txt', traj)#Limit to uncorrelated frames
-traj_ns = traj_uncorr.remove_solvent() #Remove solvent from the trajectory leaving only protein (and ligand if applicable)
-del traj; del traj_uncorr #Save space
-top = traj_ns.topology
+top = traj.topology
 
 #Get atom indices
 file_sect = open(sect, 'r').readlines()
@@ -49,12 +46,11 @@ for line in file_sect:
     #Determine atom indices for the two points
     atom1_ind = top.select(f"resid {int(res1)-1-miss_res} and name {atom1}")
     atom2_ind = top.select(f"resid {int(res2)-1-miss_res} and name {atom2}")
-    atom_ind[n,:] = [atom1_ind, atom2_ind]
+    atom_ind[n,:] = [atom1_ind[0], atom2_ind[0]]
     n+=1
 
-print(atom_ind)
 #Compute distances
-dist = md.compute_distances(traj_ns, atom_pairs=atom_ind)
+dist = md.compute_distances(traj, atom_pairs=atom_ind)
 
 #Seperate and save files
 n=0

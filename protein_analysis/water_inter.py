@@ -5,15 +5,18 @@ def traj_sect(traj, prot_res, offset):
     traj_sect = top.select('resid ' + str(res)) #Select only atoms in the given section
     return traj_sect
 
-def water_neighbor(traj, res, offset, res_not_water):
+def water_neighbor(traj, res, offset, res_not_water, threshold=0.4, atom_or_res='res'):
     import mdtraj as md
     import numpy as np
 
     #Seperate protein residues of interest
-    res_ind = traj_sect(traj, res, offset)
+    if atom_or_res == 'res':
+        res_ind = traj_sect(traj, res, offset)
+    else:
+        res_ind = res
 
     #Compute neighboring atoms for all residues of interest
-    neighbors = md.compute_neighbors(traj, 0.35, res_ind, haystack_indices=None, periodic=False)
+    neighbors = md.compute_neighbors(traj, threshold, res_ind, haystack_indices=None, periodic=False)
     
     #Determine which neighbors are water molecules
     top = traj.topology
