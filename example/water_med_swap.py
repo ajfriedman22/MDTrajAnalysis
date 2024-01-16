@@ -3,11 +3,8 @@ import numpy as np
 import argparse
 import sys
 import os.path
-import time
 import pandas as pd
 from tqdm import tqdm
-
-start_time = time.time()
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of Water Mediated Interactions')
@@ -44,23 +41,6 @@ traj = load_data.mdtraj_load(File_traj, File_gro, False, True)
 #Set protein offset based on missing residues
 offset = 1 + miss_res
 
-#Determine protein residues to examine based on sections of interest
-input_sect = open(sect_name, 'r').readlines()
-res_interest = []
-for line in input_sect:
-    line = line.split()
-    if sect_format:
-        sect_res = np.linspace(int(line[0]), int(line[1]), num = (int(line[1])-int(line[0])+1))
-        #Add to final list
-        for n in sect_res:
-            res_interest.append(int(n))
-    else:
-        for n in line:
-            res_interest.append(int(n))
-
-#Put protein residue list array in numerical order
-res_interest.sort()
-
 #Test that ligand ID Assigned properly
 test = traj.topology.select('resid ' + str(lig-offset) + ' and resname ' + lig_name)
 if test.size==0:
@@ -68,75 +48,113 @@ if test.size==0:
 
 #Get water mediated interactions with ligand
 water_neighbors_lig = water_inter.water_neighbor(traj, lig, offset, lig)
-load_time = time.time()
 
-#Loop through each residue of interest and determine water contacts
-res_interest_water_neighbors = []
-for i in range(len(res_interest)):
-    #Compute neighboring water molecules to residue of interest
-    water_neighbors = water_inter.water_neighbor(traj, res_interest[i], offset, lig)
+#Determine protein residues to examine based on sections of interest
+input_sect = open(sect_name, 'r').readlines()
+res_interest = []
+for line in input_sect:
+    line = line.split()
+    label = line[0]
+    if sect_format:
+        sect_res = np.linspace(int(line[1]), int(line[2]), num = (int(line[2])-int(line[1])+1))
+        #Add to final list
+        for n in sect_res:
+            res_interest.append(int(n))
+    else:
+        for n in line[1:]:
+            res_interest.append(int(n))
+    print(f'Processing Seciton: {label}')
+    
+    #Put protein residue list array in numerical order
+    res_interest.sort()
 
-    #Add to master list of water_neighbors
-    res_interest_water_neighbors.append(water_neighbors)
+    #Loop through each residue of interest and determine water contacts
+    res_interest_water_neighbors = []
+    for i in range(len(res_interest)):
+        #Compute neighboring water molecules to residue of interest
+        water_neighbors = water_inter.water_neighbor(traj, res_interest[i], offset, lig)
 
-if len(res_interest_water_neighbors) == 0:
-    raise Exception('Error No Water Neighbors Found! Exiting Immediately!')
-neighbor_time = time.time()
-print('Water Neighbors Found')
+        #Add to master list of water_neighbors
+        res_interest_water_neighbors.append(water_neighbors)
 
-#Determine number of frames in trajectory
-frames = len(res_interest_water_neighbors[0])
+    if len(res_interest_water_neighbors) == 0:
+        raise Exception('Error No Water Neighbors Found! Exiting Immediately!')
+    print('Water Neighbors Found')
 
-#Determine percent water mediated contacts between all residues of interest
-transition_time = []
-for i in tqdm(range(len(res_interest))):
-    trans_time_res = []
-    water_contactA = res_interest_water_neighbors[i]
+    #Determine number of frames in trajectory
+    frames = len(res_interest_water_neighbors[0])
+    
+    #Determine percent water mediated contacts between all residues of interest
+    transition_time, ref_water_all = [],[]
+    for i in tqdm(range(len(res_interest))):
+        #Keep track of transition time and waters involved
+        trans_time_res, ref_water_res = [],[]
+        if label.lower() != 'control':    
+            water_contactA = res_interest_water_neighbors[i]
             
-    #sort through frames to determine frames per swap
-    common_contact = []
-    #Get common waters
-    for t in range(frames):
-        #determine common elements in this frame
-        water_contactA_t = water_contactA[t]
-        water_contact_lig_t = water_neighbors_lig[t]
-        prot_water_lig = set(water_contactA_t) & set(water_contact_lig_t)
-        common_contact.append(prot_water_lig)
-    #set buffer for frames
-    buffer = 5
-    count = 0
-    ref_water = common_contact[0]
-    for t in range(frames-buffer):
-        for b in range(buffer):
-            if set(ref_water) & set(common_contact[t+b]):
-                count += 1+b
-                t=t+b
-                break
-            elif b==buffer:
-                if count > 0:
-                    trans_time_res.append(count/frames*300)
-                count = 0
-                ref_water = common_contact[t]
-    while 0.0 in trans_time_res:
-        trans_time_res.remove(0.0)
-    transition_time.append(trans_time_res)
-contact_time = time.time()
-print('Contacts Calculated')
+            #sort through frames to determine frames per swap
+            common_contact = []
+            #Get common waters
+            for t in range(frames):
+                #determine common elements in this frame
+                water_contactA_t = water_contactA[t]
+                water_contact_lig_t = water_neighbors_lig[t]
+                prot_water_lig = list(set(water_contactA_t) & set(water_contact_lig_t))
+                common_contact.append(prot_water_lig)
 
-#Print all present contacts to file
+            #set buffer for frames
+            buffer = 5
+            count = 0
+            ref_water = common_contact[0]
+            for t in range(frames-buffer):
+                for b in range(buffer+1):
+                    if set(ref_water) & set(common_contact[t+b]):
+                        count += 1
+                        break
+                    elif b==buffer:
+                        if count > 0:
+                            trans_time_res.append(count/(frames-buffer)*300)
+                            ref_water_res.append(ref_water[0])
+                        count = 0
+                        ref_water = common_contact[t]
+            if count != 0:
+                trans_time_res.append(count/(frames-buffer)*300)
+                ref_water_res.append(ref_water[0])
+            while 0.0 in trans_time_res:
+                trans_time_res.remove(0.0)
+            transition_time.append(trans_time_res)
+            ref_water_all.append(ref_water_res)
+        else:
+            #set buffer for frames
+            buffer = 5
+            count = 0
+            ref_water = water_contactA[0]
+            for t in range(frames-buffer):
+                for b in range(buffer+1):
+                    if set(ref_water) & set(water_contactA[t]):
+                        count += 1
+                        break
+                    elif b==buffer:
+                        if count > 0:
+                            trans_time_res.append(count/(frames-buffer)*300)
+                            ref_water_res.append(ref_water[0])
+                        count = 0
+                        ref_water = common_contact[t]
+            if count != 0:
+                trans_time_res.append(count/(frames-buffer)*300)
+                ref_water_res.append(ref_water[0])
+            while 0.0 in trans_time_res:
+                trans_time_res.remove(0.0)
+            transition_time.append(trans_time_res)
+            ref_water_all.append(ref_water_res)
+    print('Contacts Calculated')
 
-main_df = pd.DataFrame()
-for r, res in enumerate(res_interest):
-    df = pd.DataFrame({'Residue': [res]*len(transition_time[r]), 'Transition time': transition_time[r]})
-    main_df = pd.concat([main_df, df])
-main_df.to_csv('water_med_trans_time.csv')
-print(main_df.groupby('Residue')['Transition time'].mean())
-output_time = time.time()
-print('Output files written')
-
-print('Load data: ' + str(load_time - start_time))
-print('Compute Contacts: ' + str(neighbor_time - load_time))
-print('Determine Contacts: ' + str(contact_time - neighbor_time))
-print('Output data: ' + str(output_time - contact_time))
-print('-----------------------------------------------------------------')
+    #Print all present contacts to file
+    main_df = pd.DataFrame()
+    for r, res in enumerate(res_interest):
+        df = pd.DataFrame({'Residue': [res]*len(transition_time[r]), 'Transition time': transition_time[r], 'Water Involved': ref_water_all[r]})
+        main_df = pd.concat([main_df, df])
+    main_df.to_csv(f'water_med_trans_time_{label}.csv')
+    print(main_df.groupby('Residue')['Transition time'].mean())
+    print('Output files written')
 

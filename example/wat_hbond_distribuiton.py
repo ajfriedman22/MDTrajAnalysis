@@ -39,7 +39,7 @@ sys.path.insert(1, prefix + '/protein_analysis/')
 import water_inter
 
 #Load Trajectory
-traj = load_data.mdtraj_load(File_traj, File_gro, False, False)
+traj = load_data.mdtraj_load(File_traj, File_gro, False, True)
 
 #Set protein offset based on missing residues
 offset = 1 + miss_res

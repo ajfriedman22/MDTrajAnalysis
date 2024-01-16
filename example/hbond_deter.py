@@ -14,6 +14,9 @@ def split_res(res_atom, res_name_ar, res_num_ar, atom_ar):
     res_num_ar.append(res_num)
     atom_ar.append(atom)
 
+#Silence MDTraj Warnings
+warnings.filterwarnings("ignore")
+
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination all h-bonds present more than set percent of the trajectory')
 parser.add_argument('-t', required=True, help='File name for input trajectory')

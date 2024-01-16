@@ -8,7 +8,7 @@ import warnings
 import pandas as pd
 
 #Silence MDTraj Warnings
-#warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of RMSD for BB Atoms in proteins and/or ligands')
@@ -85,6 +85,7 @@ if ref != 'none':
     if aa_atom != 0:
         if aa_atom_ref == 0:
             aa_atom_ref = aa_atom
+        print(aa_atom_ref)
         ref_bb = load_data.load_ref(ref, 'backbone and index <= ' + str(aa_atom_ref))
         traj_bb = traj.atom_slice(top.select('backbone and index <= ' + str(aa_atom))) #Backbond atoms of protein 1 only
         ref2_bb = load_data.load_ref(ref2, 'backbone and index > ' + str(aa_atom_ref))
@@ -166,7 +167,7 @@ if ref != 'none' and rmsd_sect != 'none':
              traj_sect = traj2_bb.atom_slice(traj2_bb.topology.select(str(traj_res[0]-traj_bb.n_residues) + ' <= resid and resid <= ' + str(traj_res[1]-traj_bb.n_residues))) #Limit trajectory to the section of choice
         
         if traj_sect.n_atoms != ref_sect.n_atoms:
-            print(f'Skipping Section {name} because different atoms selected')
+             print(f'Skipping Section {name} because different atoms selected')
         else:
             #Compute RMSD for section of interest
             if ref_name == 'self':

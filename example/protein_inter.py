@@ -19,7 +19,7 @@ parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-m', required=False, type=int, default = 0, help= 'Supply the number of missing terminal residues(default 0)')
 parser.add_argument('-s', required=True, help= 'File containing sections of interest(txt)')
-parser.add_argument('-n', required=True, help= 'Number of protein residues')
+parser.add_argument('-n', required=False, default=1, help= 'Number of protein residues')
 
 #Import Arguments
 args = parser.parse_args()
