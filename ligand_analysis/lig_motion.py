@@ -29,34 +29,37 @@ def deter_multimodal(dihedrals, name, i):
     import os.path
     current_directory = os.path.dirname(os.path.realpath(__file__))
     prefix = current_directory.rsplit('/',1)[0]
-    print(prefix)
     sys.path.insert(1, prefix + '/Traj_process/')
     import data_process
 
     #Seperate dihedral angles
-    dihe_name = name[i]
     dihe_dist = dihedrals[:,i]
     
     #Determine maxima for probability distribution
     maxima = data_process.compute_max(dihe_dist)
 
     #Determine data not in the main peak
-    main_peak = []
-    second_peak = []
+    main_peak, other_peak = [], []
     for i in dihe_dist:
-        diff = i - maxima
-        if abs(i - maxima) < 30 or abs(i + 360 - maxima) < 30 or abs(i - 360 - maxima) < 30:
+        if abs(i - maxima) < 40 or abs(i + 360 - maxima) < 40 or abs(i - 360 - maxima) < 40:
             main_peak.append(i)
         else:
-            second_peak.append(i)
-        
-    #If greater than 3 outliers count as seperate peak
-    if len(second_peak) > (0.05*len(dihe_dist)):
-        #Determine the maxima of the two peaks individually 
-        maxima_main = data_process.compute_max(main_peak)
-        maxima_second = data_process.compute_max(second_peak)
+            other_peak.append(i)
+    all_maxima = [data_process.compute_max(main_peak)]
 
-        return [maxima_main, maxima_second], dihe_dist
-    else:
-        return [maxima], dihe_dist
+    #If greater than 5% outliers count as seperate peak
+    while len(other_peak)/len(dihe_dist) > 0.15:
+        maxima = data_process.compute_max(other_peak)
+        new_dist = other_peak
+        main_peak, other_peak = [], []
+        for i in new_dist:
+            if abs(i - maxima) < 40 or abs(i + 360 - maxima) < 40 or abs(i - 360 - maxima) < 40:
+                main_peak.append(i)
+            else:
+                other_peak.append(i)
+        if len(main_peak) > (0.10*len(dihe_dist)):
+            all_maxima.append(data_process.compute_max(main_peak))
+        else:
+            break
+    return all_maxima, dihe_dist
 
