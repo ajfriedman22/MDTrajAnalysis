@@ -24,7 +24,6 @@ def compute_max(data):
     import numpy as np
 
     kde = gaussian_kde(data)
-    opt = optimize.minimize_scalar(lambda x: -kde(x))
     samples = np.linspace(min(data), max(data), 50)
     probs = kde.evaluate(samples)
     maxima_index = probs.argmax()
