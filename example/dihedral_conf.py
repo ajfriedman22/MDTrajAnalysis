@@ -17,8 +17,9 @@ def input_torsion(file_input, traj):
         for j in range(4):
             torsion_ind[i,j] = traj.topology.select('resid ' + str(int(line[1])-offset) + ' and name ' + str(line[j+2]))
         max_values.append(line[6:])
-        peak_options.append(np.linspace(1, len(line[6:]), num=len(line[6:])))
-    return torsion_name, torsion_ind, max_values
+        opt = np.linspace(1, len(line[6:]), num=len(line[6:]), dtype=int)
+        peak_options.append(list(opt))
+    return torsion_name, torsion_ind, max_values, peak_options
 
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -31,7 +32,29 @@ def find_nearest(array, value):
         return idx2+1
     else:
         return idx3+1
-
+def get_conformations(peak_options):
+    num_combos = len(peak_options[0])
+    for i in range(1, len(peak_options)):
+        num_combos = num_combos*len(peak_options[i])
+    combos = np.zeros((num_combos, len(peak_options)))
+    c = 0
+    if len(peak_options) == 6:
+        for i in peak_options[0]:
+            for j in peak_options[1]:
+                for k in peak_options[2]:
+                    for l in peak_options[3]:
+                        for m in peak_options[4]:
+                            for n in peak_options[5]:
+                                combos[c,:] = [i, j, k, l, m, n]
+                                c+=1
+    else:
+        for i in peak_options[0]:
+            for j in peak_options[1]:
+                for k in peak_options[2]:
+                    for l in peak_options[3]:
+                        combos[c,:] = [i, j, k, l]
+                        c +=1
+    return combos
 #Declare arguments
 parser = argparse.ArgumentParser(description = 'Determination of Ligand Conformers')
 parser.add_argument('-t', required=True, help='File name for input trajectory')
@@ -72,26 +95,33 @@ dihedral = md.compute_dihedrals(traj, indices=torsion_ind)
 dihedral = dihedral*(180/np.pi)
 
 #Determine which dihderal peak is being sampled per frame
-dihe_peak_sampled = np.zeros((traj.n_frames, len(file_input)))
-for t in range(len(traj.n_frames)):
-    for i in range(len(file_input)):
-        dihe_peak_sampled[t][i] = find_nearest(max_values[i], dihedral[t][i])
+num_dihe = len(torsion_name)
+dihe_peak_sampled = np.zeros((traj.n_frames, num_dihe))
+for t in range(traj.n_frames):
+    for i in range(num_dihe):
+        max_value_i = np.array(max_values[i], dtype=float)
+        value = dihedral[t,i]
+        dihe_peak_sampled[t,i] = find_nearest(max_value_i, value)
+print('Peaks Found')
 
 #Name conformations
-possible_conformations = product(peak_options)
-conformer = []
-for i, opt in enumerate(possible_conformations):
-    conformer.append(opt)
+conformer = get_conformations(peak_options)
 
 #Classify dihedrals into conformations
 count = np.zeros(len(conformer))
-for t in range(len(traj.n_frames)):
-    idx = conformer.index(dihe_peak_sampled[t,:])
-    count[idx] += 1
+for t in range(traj.n_frames):
+    for i, conf in enumerate(conformer):
+        if (conf == dihe_peak_sampled[t,:]).all():
+            count[i] += 1
+            break
 per = 100*(count/traj.n_frames)
+
 #Print conformer angle combinations, percent ligand is in conformation, and frame in which the ligand is in that conformation
-df = pd.DataFrame({'Conformer': np.linspace(0, len(per), num=len(per)), 'Max Values': per})
-df.to_csv('conf_per.csv')
+df = pd.DataFrame({'Conformer ID': np.linspace(1, len(per), num=len(per), dtype=int), 'Occupancy': per})
+for i in range(1, num_dihe):
+    df[f'Max for d{i}'] = conformer[:,int(i-1)]
+df_non_zero = df[df['Occupancy'] > 0]
+df_non_zero.to_csv('conf_per.csv')
 
 print('Dihedral Analysis Complete')
 print('---------------------------------------------------------------')
