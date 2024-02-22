@@ -26,16 +26,18 @@ def find_nearest(array, value):
     idx = (np.abs(array - value)).argmin()
     idx2 = (np.abs(array - value + 360)).argmin()
     idx3 = (np.abs(array - value - 360)).argmin()
-    if array[idx] <= array[idx2] and array[idx] <= array[idx3]:
+    if np.abs(array[idx]-value) <= np.abs(array[idx2] - value + 360) and np.abs(array[idx] - value) <= np.abs(array[idx3] - value - 360):
         return idx+1
-    elif array[idx2] <= array[idx] and array[idx2] <= array[idx3]:
+    elif np.abs(array[idx2] - value + 360) <= np.abs(array[idx] - value) and np.abs(array[idx2] - value + 360) <= np.abs(array[idx3] - value - 360):
         return idx2+1
     else:
         return idx3+1
+
 def get_conformations(peak_options):
     num_combos = len(peak_options[0])
     for i in range(1, len(peak_options)):
         num_combos = num_combos*len(peak_options[i])
+    print(num_combos)
     combos = np.zeros((num_combos, len(peak_options)))
     c = 0
     if len(peak_options) == 6:
@@ -118,8 +120,8 @@ per = 100*(count/traj.n_frames)
 
 #Print conformer angle combinations, percent ligand is in conformation, and frame in which the ligand is in that conformation
 df = pd.DataFrame({'Conformer ID': np.linspace(1, len(per), num=len(per), dtype=int), 'Occupancy': per})
-for i in range(1, num_dihe):
-    df[f'Max for d{i}'] = conformer[:,int(i-1)]
+for i in range(num_dihe):
+    df[f'Max for d{i+1}'] = conformer[:,i]
 df_non_zero = df[df['Occupancy'] > 0]
 df_non_zero.to_csv('conf_per.csv')
 
