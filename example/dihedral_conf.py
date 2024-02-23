@@ -69,9 +69,11 @@ def clust_conf(traj, per, file_name):
     distances = np.empty((traj.n_frames, traj.n_frames))
     for i in range(traj.n_frames):
         distances[i] = md.rmsd(traj, traj, i, atom_indices=traj.topology.select('element != H'))
+    #np.savetxt('test_dist.txt', distances)
 
     #Perform Clustering
     reduced_distances = squareform(distances, checks=False)
+    #np.savetxt('test_reduce_dist.txt', reduced_distances)
     link = linkage(reduced_distances, method='single') #The hierarchical clustering encoded as a matrix
     frame_list = dendrogram(link, no_labels=False, count_sort='descendent')['leaves']
     frame_cat = dendrogram(link, no_labels=False, count_sort='descendent')['color_list']
@@ -79,14 +81,14 @@ def clust_conf(traj, per, file_name):
     #Keep only one file per cluster
     frames_sep = [] #List of frames that are unique and will be processed
     cat = frame_cat[0]
-    frames_indv = [0]
+    frames_indv = [frame_list[0]]
     for frame in range(1, len(frame_list)-1):
         if frame_cat[frame] == cat:
-            frames_indv.append(frame)
+            frames_indv.append(frame_list[frame])
         else:
             frames_sep.append(frames_indv)
             cat = frame_cat[frame]
-            frames_indv = [frame]
+            frames_indv = [frame_list[frame]]
     frames_sep.append(frames_indv)
 
     #Save file names which have unique clusters
@@ -112,10 +114,19 @@ def process_confs(traj, per, file_name):
 
     #compute radius of gyration
     rg = md.compute_rg(traj)
+
+    if end_pts != None:
+        #Compute end point distance
+        atom_pairs = [[traj.topology.select(f'name {end_pts[0]}')[0], traj.topology.select(f'name {end_pts[1]}')[0]]]
+        ep_dist = md.compute_distances(traj, atom_pairs)
+    
+    #Save CSV
     df_clust = pd.DataFrame({'Conformer ID': np.linspace(1, len(per), num=len(per), dtype=int), 'Occupancy': per, 'Relative FE': rel_ener})
     #print(df_clust)
     df_non_zero = df_clust[df_clust['Occupancy'] > 0]
     df_non_zero['Radius of Gyration'] = rg
+    if end_pts != None:
+        df_non_zero['Molecule Width'] = ep_dist
     df_non_zero.to_csv(f'{file_name}.csv')
 
     labels = []
@@ -147,13 +158,20 @@ def process_confs(traj, per, file_name):
     plt.xlabel(r'Radius of Gyration($\AA$)')
     plt.savefig(f'{file_name}_rg_hist.png') 
     plt.close()
+    
+    if end_pts != None:
+        plt.figure()
+        sns.histplot(df_non_zero, x='Molecule Width')
+        plt.xlabel(r'Molecule Width ($\AA$)')
+        plt.savefig(f'{file_name}_mw_hist.png') 
+        plt.close()
 
 def get_rel_ener(per_all):
     per_non_zero = per_all[per_all != 0]
     ref_per = np.min(per_non_zero)
     rel_ener = np.zeros(len(per_all))
     for p, per in enumerate(per_all):
-        rel_ener[p] = (k/1000)*300*np.log(per/ref_per)*Avogadro
+        rel_ener[p] = -(k/1000)*300*np.log(per/ref_per)*Avogadro
     return rel_ener
 
 #Declare arguments
@@ -162,6 +180,7 @@ parser.add_argument('-t', required=True, help='File name for input trajectory')
 parser.add_argument('-g', required=True, help= 'File name for input topology (gro format)')
 parser.add_argument('-s', required=True, type = str, help= 'name res# name_atom1 name_atom2 name_atom3 name_atom4')
 parser.add_argument('-n', required=False, default = 'Lig', type = str, help= 'Ligand Name')
+parser.add_argument('-e', required=False, nargs = '*', default = None, type = str, help= 'Ligand End Point Atoms')
 
 #Import Arguments
 args = parser.parse_args()
@@ -169,6 +188,7 @@ File_traj = args.t
 File_gro = args.g
 file_input = args.s
 name = args.n
+end_pts = args.e
 
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
@@ -180,8 +200,8 @@ import load_data
 traj = load_data.mdtraj_load(File_traj, File_gro, True, True)
 
 #Cluster all conformers
-traj_clust, per_clust, group = clust_conf(traj, np.ones(traj.n_frames), f'{name}_clust')
-process_confs(traj_clust, per_clust, f'{name}_clust')
+#traj_clust, per_clust, group = clust_conf(traj, np.ones(traj.n_frames), f'{name}_clust')
+#process_confs(traj_clust, per_clust, f'{name}_clust')
 
 #Set protein offset based on missing residues
 offset = 1
