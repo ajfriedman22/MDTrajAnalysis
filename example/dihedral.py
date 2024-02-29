@@ -30,6 +30,10 @@ File_traj = args.t
 File_gro = args.g
 file_input = args.s
 
+#Output file
+input_file = open(file_input, 'r').readlines()
+output_file = open('dihe_ind_max.txt', 'w')
+
 #Source custom functions
 current_directory = os.path.dirname(os.path.realpath(__file__))
 prefix = current_directory.rsplit('/',1)[0]
@@ -65,10 +69,15 @@ for i in range(len(torsion_name)):
     #If multiple peaks add to dihe_max array
     dihe_max.append(maxima)
     dihe_ind.append(torsion_name[i])
+    if len(maxima) > 1:
+        define_torsion = input_file[i].strip('\n')
+        output_file.write(define_torsion)
+        for max in maxima:
+            output_file.write(f' {max}')
+        output_file.write('\n')
 
 #Print conformer angle combinations, percent ligand is in conformation, and frame in which the ligand is in that conformation
 df = pd.DataFrame({'Dihedral': dihe_ind, 'Max Values': dihe_max})
 df.to_csv('conf_id.csv')
 
-print('Dihedral Analysis Complete')
-print('---------------------------------------------------------------')
+
