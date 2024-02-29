@@ -12,6 +12,7 @@ from scipy.constants import k, Avogadro
 import random
 import matplotlib.pyplot as plt
 import seaborn as sns
+from itertools import product
 
 def input_torsion(file_input, traj):
     input_ind = open(file_input, 'r').readlines()
@@ -39,37 +40,13 @@ def find_nearest(array, value):
     else:
         return idx3+1
 
-def get_conformations(peak_options):
-    num_combos = len(peak_options[0])
-    for i in range(1, len(peak_options)):
-        num_combos = num_combos*len(peak_options[i])
-    
-    combos = np.zeros((num_combos, len(peak_options)))
-    c = 0
-    if len(peak_options) == 6:
-        for i in peak_options[0]:
-            for j in peak_options[1]:
-                for k in peak_options[2]:
-                    for l in peak_options[3]:
-                        for m in peak_options[4]:
-                            for n in peak_options[5]:
-                                combos[c,:] = [i, j, k, l, m, n]
-                                c+=1
-    else:
-        for i in peak_options[0]:
-            for j in peak_options[1]:
-                for k in peak_options[2]:
-                    for l in peak_options[3]:
-                        combos[c,:] = [i, j, k, l]
-                        c +=1
-    return combos
-
 def clust_conf(traj, per, file_name):
+    per = per[per != 0]
+    print(len(per))
     #Compute pairwise distances
     distances = np.empty((traj.n_frames, traj.n_frames))
     for i in range(traj.n_frames):
         distances[i] = md.rmsd(traj, traj, i, atom_indices=traj.topology.select('element != H'))
-    #np.savetxt('test_dist.txt', distances)
 
     #Perform Clustering
     reduced_distances = squareform(distances, checks=False)
@@ -90,7 +67,7 @@ def clust_conf(traj, per, file_name):
             cat = frame_cat[frame]
             frames_indv = [frame_list[frame]]
     frames_sep.append(frames_indv)
-
+    
     #Save file names which have unique clusters
     frames_unique = []
     per_unique = np.zeros(len(frames_sep))
@@ -122,7 +99,6 @@ def process_confs(traj, per, file_name):
     
     #Save CSV
     df_clust = pd.DataFrame({'Conformer ID': np.linspace(1, len(per), num=len(per), dtype=int), 'Occupancy': per, 'Relative FE': rel_ener})
-    #print(df_clust)
     df_non_zero = df_clust[df_clust['Occupancy'] > 0]
     df_non_zero['Radius of Gyration'] = rg
     if end_pts != None:
@@ -226,7 +202,11 @@ for t in range(traj.n_frames):
 print('Peaks Found')
 
 #Name conformations
-conformer = get_conformations(peak_options)
+conf = list(product(*peak_options))
+conformer = np.zeros((len(conf), len(conf[0])))
+for c in range(len(conf)):
+    conf_c = conf[c]
+    conformer[c,:] = conf_c
 
 #Classify dihedrals into conformations
 count = np.zeros(len(conformer))
