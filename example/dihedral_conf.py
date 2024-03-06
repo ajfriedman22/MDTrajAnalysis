@@ -41,13 +41,11 @@ def find_nearest(array, value):
         return idx3+1
 
 def clust_conf(traj, per, file_name):
-    per = per[per != 0]
-    print(len(per))
-    #Compute pairwise distances
+    #Compute pairwise RMSD
     distances = np.empty((traj.n_frames, traj.n_frames))
     for i in range(traj.n_frames):
         distances[i] = md.rmsd(traj, traj, i, atom_indices=traj.topology.select('element != H'))
-
+    
     #Perform Clustering
     reduced_distances = squareform(distances, checks=False)
     #np.savetxt('test_reduce_dist.txt', reduced_distances)
@@ -68,24 +66,50 @@ def clust_conf(traj, per, file_name):
             frames_indv = [frame_list[frame]]
     frames_sep.append(frames_indv)
     
-    #Save file names which have unique clusters
-    frames_unique = []
-    per_unique = np.zeros(len(frames_sep))
-    for i in range(len(frames_sep)):
-        if len(frames_sep[i]) > 0:
-            for f in frames_sep[i]:
-                per_unique[i] += per[f]
-            if per_unique[i] > 0:
-                frames_unique.append(int(random.sample(frames_sep[i], 1)[0]))
-        else:
-            raise Exception(f'Blank Cluster {frames_sep}')
+    #Analyze each cluster (determine centroid and plot Intercluster RMSD)
+    frames_unique, per_unique= compare_within_cluster(traj, frames_sep, per, distances[0], file_name)
+
     traj_clust = traj.slice(frames_unique)
     traj_clust.save_pdb(f'{file_name}.pdb')
     return traj_clust, per_unique, frames_sep
 
+def compare_within_cluster(traj, cluster_frames, per, rmsd_all, file_name):
+    per_unique = np.zeros(len(cluster_frames))
+    frames_unique = []
+    df_clust = pd.DataFrame()
+    for f, frames in enumerate(cluster_frames):
+        cluster_traj = traj.slice(frames)
+        rmsd_clust = np.empty((cluster_traj.n_frames, cluster_traj.n_frames))
+        rmsd_clust_mean = np.zeros(cluster_traj.n_frames)
+        for i in range(cluster_traj.n_frames):
+            rmsd_clust[i] = md.rmsd(cluster_traj, cluster_traj, i, atom_indices=cluster_traj.topology.select('element != H'))
+            rmsd_clust_mean[i] = np.mean(rmsd_clust[i])
+        min_index = np.argmin(rmsd_clust_mean)
+        centroid_frame = frames[min_index]
+        frames_unique.append(centroid_frame)
+        for frame in frames:
+            per_unique[f] += per[frame]
+        df = pd.DataFrame({'Cluster ID': f+1, r'RMSD ($\AA$)': rmsd_clust[min_index]*10})
+        df_clust = pd.concat([df_clust, df])
+    #Save CSV
+    df_clust.to_csv(f'{file_name}-clust-rmsd.csv')
+    
+    #Add Comparison of Not Clustered
+    #df = pd.DataFrame({'Cluster ID': 'Not Clustered', r'RMSD ($\AA$)': rmsd_all*10})
+    #df_clust = pd.concat([df_clust, df])
+
+    #Plot Comparison
+    plt.figure()
+    g = sns.FacetGrid(df_clust, col="Cluster ID", col_wrap=5, xlim=(0,3))
+    g.map(sns.histplot, r'RMSD ($\AA$)')
+    plt.savefig(f'{file_name}-clust-rmsd.png')
+    plt.close()    
+    return frames_unique, per_unique
+
 def process_confs(traj, per, file_name):
     #Save PDB
     traj.save_pdb(f'{file_name}.pdb')
+
     #Compute relative conformer energy
     rel_ener = get_rel_ener(per)
 
@@ -111,6 +135,7 @@ def process_confs(traj, per, file_name):
             labels.append(df_non_zero['Conformer ID'].values[i])
         else:
             labels.append('')
+    df_order = df_non_zero.sort_values('Occupancy', ascending=False, inplace=False)
     plt.figure()
     plt.pie(df_non_zero['Occupancy'], labels=labels)
     plt.title(name)
@@ -118,8 +143,11 @@ def process_confs(traj, per, file_name):
     plt.close()
 
     plt.figure()
-    sns.barplot(df_non_zero, x='Conformer ID', y='Relative FE')
-    plt.ylabel('Relative Free Energy (kJ/mol)')
+    sns.barplot(df_order, x='Conformer ID', hue='Relative FE', y='Relative FE', palette='cool_r', legend=False, order=df_order['Conformer ID'])
+    plt.xlabel('Cluster ID', fontsize=16)
+    plt.ylabel('Relative Free Energy (kcal/mol)', fontsize=16)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=14)
     plt.savefig(f'{file_name}_FE.png')
     plt.close()
 
@@ -143,11 +171,10 @@ def process_confs(traj, per, file_name):
         plt.close()
 
 def get_rel_ener(per_all):
-    per_non_zero = per_all[per_all != 0]
-    ref_per = np.min(per_non_zero)
+    ref_per = np.max(per_all)
     rel_ener = np.zeros(len(per_all))
     for p, per in enumerate(per_all):
-        rel_ener[p] = -(k/1000)*300*np.log(per/ref_per)*Avogadro
+        rel_ener[p] = -(k/1000)*300*np.log(per/ref_per)*Avogadro/4.184
     return rel_ener
 
 #Declare arguments
